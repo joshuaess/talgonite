@@ -390,15 +390,6 @@ impl MapRenderer {
             }
         }
         let build_wall_instance = |wall: Wall, x: f32, y: f32, a: &Allocation| -> Instance {
-            if x < 10. && y < 10. {
-                tracing::info!(
-                    "Building wall instance for wall ID {} at ({}, {})",
-                    wall.id,
-                    x,
-                    y
-                );
-            }
-
             let height = a.rectangle.max.y - a.rectangle.min.y;
 
             let coord = wall.side.get_position(x, y, height as f32);
