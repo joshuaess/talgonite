@@ -100,10 +100,7 @@ fn process_net_packets(
             NetworkEvent::Packet(code, data) => match code {
                 &server::Codes::HeartBeatResponse => {
                     if let Some(query) = parse_packet::<server::HeartBeatResponse>(data) {
-                        outbox.send(&client::HeartBeat {
-                            first: query.first,
-                            second: query.second,
-                        });
+                        outbox.send(&client::HeartBeat { value: query.value });
                     }
                 }
                 &server::Codes::SynchronizeTicksResponse => {
