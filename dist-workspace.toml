@@ -11,3 +11,18 @@ ci = "github"
 installers = ["msi"]
 # Target platforms to build apps for (Rust target-triple syntax)
 targets = ["aarch64-apple-darwin", "x86_64-unknown-linux-gnu", "x86_64-pc-windows-msvc"]
+# System dependencies to install on Linux
+apt-packages = [
+    "libasound2-dev",
+    "libudev-dev",
+    "libwayland-dev",
+    "libxkbcommon-dev",
+    "libx11-dev",
+    "libxcursor-dev",
+    "libxi-dev",
+    "libxrandr-dev",
+    "libxinerama-dev",
+    "libegl1-mesa-dev",
+    "libgles2-mesa-dev",
+    "pkg-config",
+]
