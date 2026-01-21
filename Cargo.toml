@@ -1,5 +1,19 @@
 cargo-features = ["codegen-backend"]
 
+[package]
+name = "talgonite"
+version = "0.1.0"
+edition = "2024"
+repository = "https://github.com/talgonite/talgonite"
+authors = ["Chris Rohlfs"]
+description = "Talgonite is a Darkages client"
+
+[package.metadata.wix]
+upgrade-guid = "8797ED34-0315-470B-83DD-E9BAA9577679"
+path-guid = "3ACCB3E0-68DA-4089-8B96-9E4424618FC4"
+license = false
+eula = false
+
 [profile.dev]
 opt-level = 1
 debug = 0
@@ -15,10 +29,10 @@ codegen-units = 1
 panic = "abort"
 strip = true
 
-[package]
-name = "talgonite"
-version = "0.1.0"
-edition = "2024"
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"
 
 [lib]
 name = "talgonite"
