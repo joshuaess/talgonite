@@ -143,6 +143,7 @@ jobs:
             libxinerama-dev \
             libegl1-mesa-dev \
             libgles2-mesa-dev \
+            libdbus-1-dev \
             pkg-config
       - name: Install dist
         run: ${{ matrix.install_dist.run }}
