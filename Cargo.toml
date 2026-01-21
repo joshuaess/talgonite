@@ -1,5 +1,3 @@
-cargo-features = ["codegen-backend"]
-
 [package]
 name = "talgonite"
 version = "0.1.0"
@@ -64,7 +62,7 @@ wgpu = "27.0"
 libarx = { version = "0.4", features = ["zstd"] }
 jubako = "*"
 async-std = "1.13"
-rand = { version = "0.9", features = ["log", "nightly", "std"] }
+rand = { version = "0.9", features = ["log", "std"] }
 md5 = "0.8"
 bevy = { version = "0.17", default-features = false, features = ["bevy_state"] }
 gilrs = "0.11"
