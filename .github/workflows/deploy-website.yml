@@ -1,0 +1,97 @@
+name: Deploy Website
+
+on:
+  # Trigger after the release workflow completes
+  workflow_run:
+    workflows: ["Release"]
+    types:
+      - completed
+    branches:
+      - main
+  # Allow manual trigger
+  workflow_dispatch:
+  # Also deploy on changes to the www directory
+  push:
+    branches:
+      - main
+    paths:
+      - 'www/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # Only run if release succeeded (or if manually triggered / www changed)
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    permissions:
+      contents: read
+      deployments: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: www/package-lock.json
+
+      - name: Fetch latest release info
+        id: release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Get latest release info from GitHub API
+          RELEASE_JSON=$(gh api repos/${{ github.repository }}/releases/latest 2>/dev/null || echo '{}')
+
+          if [ "$RELEASE_JSON" = "{}" ]; then
+            echo "No release found, using defaults"
+            echo "version=0.1.0" >> $GITHUB_OUTPUT
+            echo "tag=v0.1.0" >> $GITHUB_OUTPUT
+          else
+            TAG=$(echo "$RELEASE_JSON" | jq -r '.tag_name')
+            VERSION=$(echo "$TAG" | sed 's/^v//')
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "tag=$TAG" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Update version.json
+        run: |
+          VERSION="${{ steps.release.outputs.version }}"
+          TAG="${{ steps.release.outputs.tag }}"
+
+          cat > www/src/data/version.json << EOF
+          {
+            "version": "$VERSION",
+            "tag": "$TAG",
+            "downloads": {
+              "windows": {
+                "url": "https://github.com/${{ github.repository }}/releases/download/$TAG/talgonite-x86_64-pc-windows-msvc.msi",
+                "filename": "talgonite-x86_64-pc-windows-msvc.msi"
+              },
+              "macos": {
+                "url": "https://github.com/${{ github.repository }}/releases/download/$TAG/talgonite-aarch64-apple-darwin.tar.xz",
+                "filename": "talgonite-aarch64-apple-darwin.tar.xz"
+              },
+              "linux": {
+                "url": "https://github.com/${{ github.repository }}/releases/download/$TAG/talgonite-x86_64-unknown-linux-gnu.tar.xz",
+                "filename": "talgonite-x86_64-unknown-linux-gnu.tar.xz"
+              }
+            }
+          }
+          EOF
+
+      - name: Install dependencies
+        working-directory: www
+        run: npm install
+
+      - name: Build
+        working-directory: www
+        run: npm run build
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy www/dist --project-name=talgonite

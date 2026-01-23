@@ -1,0 +1,253 @@
+---
+import versionData from '../data/version.json';
+
+const { version, downloads } = versionData;
+---
+
+<div class="download-wrapper">
+  <div class="download-button-group">
+    <a id="download-main" href={downloads.windows.url} class="btn btn-primary">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+        <polyline points="7 10 12 15 17 10" />
+        <line x1="12" y1="15" x2="12" y2="3" />
+      </svg>
+      <span id="download-text">Download for Windows</span>
+    </a>
+    <button class="btn btn-dropdown" type="button" aria-label="Show all download options">
+      <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="6 9 12 15 18 9" />
+      </svg>
+    </button>
+    <div class="dropdown-menu" role="menu">
+      <a href={downloads.windows.url} class="dropdown-item" data-platform="windows" role="menuitem">
+        <svg class="platform-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801"/>
+        </svg>
+        <span>Windows</span>
+        <span class="file-ext">.msi</span>
+      </a>
+      <a href={downloads.macos.url} class="dropdown-item" data-platform="macos" role="menuitem">
+        <svg class="platform-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+        </svg>
+        <span>macOS</span>
+        <span class="file-ext">.tar.xz</span>
+      </a>
+      <a href={downloads.linux.url} class="dropdown-item" data-platform="linux" role="menuitem">
+        <svg class="platform-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12.504 0c-.155 0-.315.008-.48.021-4.226.333-3.105 4.807-3.17 6.298-.076 1.092-.3 1.953-1.05 3.02-.885 1.051-2.127 2.75-2.716 4.521-.278.832-.41 1.684-.287 2.489a.424.424 0 00-.11.135c-.26.268-.45.6-.663.839-.199.199-.485.267-.797.4-.313.136-.658.269-.864.68-.09.189-.136.394-.132.602 0 .199.027.4.055.536.058.399.116.728.04.97-.249.68-.28 1.145-.106 1.484.174.334.535.47.94.601.81.2 1.91.135 2.774.6.926.466 1.866.67 2.616.47.526-.116.97-.464 1.208-.946.587-.003 1.23-.269 2.26-.334.699-.058 1.574.267 2.577.2.025.134.063.198.114.333l.003.003c.391.778 1.113 1.132 1.884 1.071.771-.06 1.592-.536 2.257-1.306.631-.765 1.683-1.084 2.378-1.503.348-.199.629-.469.649-.853.023-.4-.2-.811-.714-1.376v-.097l-.003-.003c-.17-.2-.25-.535-.338-.926-.085-.401-.182-.786-.492-1.046h-.003c-.059-.054-.123-.067-.188-.135a.357.357 0 00-.19-.064c.431-1.278.264-2.55-.173-3.694-.533-1.41-1.465-2.638-2.175-3.483-.796-1.005-1.576-1.957-1.56-3.368.026-2.152.236-6.133-3.544-6.139zm.529 3.405h.013c.213 0 .396.062.584.198.19.135.33.332.438.533.105.259.158.459.166.724 0-.02.006-.04.006-.06v.105a.086.086 0 01-.004-.021l-.004-.024a1.807 1.807 0 01-.15.706.953.953 0 01-.213.335.71.71 0 00-.088-.042c-.104-.045-.198-.064-.284-.133a1.312 1.312 0 00-.22-.066c.05-.06.146-.133.183-.198.053-.128.082-.264.088-.402v-.02a1.21 1.21 0 00-.061-.4c-.045-.134-.101-.2-.183-.333-.084-.066-.167-.132-.267-.132h-.016c-.093 0-.176.03-.262.132a.8.8 0 00-.205.334 1.18 1.18 0 00-.09.4v.019c.002.089.008.179.02.267-.193-.067-.438-.135-.607-.202a1.635 1.635 0 01-.018-.2v-.02a1.772 1.772 0 01.15-.768c.082-.22.232-.406.43-.533.2-.135.39-.198.63-.198zm-1.588.933c.046.105.112.132.071.198l-.02.042c.013.015.028.027.04.04-.023.038-.048.074-.074.11a2.813 2.813 0 00-.432.64 3.333 3.333 0 00-.3.838c-.082.39-.137.467-.146.467-.014 0-.02-.106-.02-.2 0-.2.031-.4.082-.601.05-.202.12-.401.2-.601.077-.2.164-.394.26-.582.093-.2.193-.399.288-.596zm3.182 0c.096.198.193.396.288.596.093.188.183.382.258.582.082.2.153.4.2.601.051.2.08.4.08.6 0 .2-.006.201-.019.201-.009 0-.066-.077-.146-.467a3.334 3.334 0 00-.3-.838 2.823 2.823 0 00-.432-.64l-.057-.094c.022-.022.038-.04.058-.06-.042-.066.01-.093.07-.198v.017z"/>
+        </svg>
+        <span>Linux</span>
+        <span class="file-ext">.tar.xz</span>
+      </a>
+      <div class="dropdown-divider"></div>
+      <a href="https://github.com/talgonite/talgonite/releases" class="dropdown-item dropdown-item-secondary" role="menuitem">
+        <svg class="platform-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+        </svg>
+        <span>All releases</span>
+      </a>
+    </div>
+  </div>
+  <span class="version-label">v{version}</span>
+</div>
+
+<script is:inline>
+(function() {
+  var downloads = {
+    windows: { label: 'Download for Windows' },
+    macos: { label: 'Download for macOS' },
+    linux: { label: 'Download for Linux' }
+  };
+
+  function detectPlatform() {
+    var ua = navigator.userAgent.toLowerCase();
+    if (ua.indexOf('win') !== -1) return 'windows';
+    if (ua.indexOf('mac') !== -1) return 'macos';
+    if (ua.indexOf('linux') !== -1) return 'linux';
+    return 'windows';
+  }
+
+  var platform = detectPlatform();
+  var mainBtn = document.getElementById('download-main');
+  var downloadText = document.getElementById('download-text');
+  var platformItem = document.querySelector('[data-platform="' + platform + '"]');
+
+  if (mainBtn && downloadText && platformItem) {
+    mainBtn.href = platformItem.href;
+    downloadText.textContent = downloads[platform].label;
+    platformItem.classList.add('detected');
+  }
+
+  var wrapper = document.querySelector('.download-button-group');
+  var toggle = wrapper.querySelector('.btn-dropdown');
+  var menu = wrapper.querySelector('.dropdown-menu');
+
+  toggle.addEventListener('click', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    var isOpen = menu.classList.toggle('open');
+    toggle.classList.toggle('open', isOpen);
+  });
+
+  document.addEventListener('click', function(e) {
+    if (!wrapper.contains(e.target)) {
+      menu.classList.remove('open');
+      toggle.classList.remove('open');
+    }
+  });
+})();
+</script>
+
+<style>
+  .download-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .download-button-group {
+    display: flex;
+    position: relative;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.875rem 1.5rem;
+    font-family: system-ui, -apple-system, sans-serif;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .btn-primary {
+    background: var(--color-primary);
+    color: #1a1814;
+    border-radius: 2rem 0 0 2rem;
+  }
+
+  .btn-primary:hover {
+    background: var(--color-primary-hover);
+    color: #1a1814;
+  }
+
+  .btn-dropdown {
+    background: var(--color-primary);
+    color: #1a1814;
+    border-radius: 0 2rem 2rem 0;
+    padding: 0.875rem 1rem;
+    border-left: 1px solid rgba(0, 0, 0, 0.15);
+  }
+
+  .btn-dropdown:hover {
+    background: var(--color-primary-hover);
+  }
+
+  .btn-dropdown.open .chevron {
+    transform: rotate(180deg);
+  }
+
+  .icon {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  .chevron {
+    width: 1rem;
+    height: 1rem;
+    transition: transform 0.2s ease;
+  }
+
+  .dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: 0.75rem;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: 1rem;
+    padding: 0.5rem;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-0.5rem);
+    transition: all 0.2s ease;
+    z-index: 100;
+    min-width: 220px;
+  }
+
+  .dropdown-menu.open {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+  }
+
+  .dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    font-family: system-ui, -apple-system, sans-serif;
+    font-size: 0.9375rem;
+    color: var(--color-text);
+    border-radius: 0.5rem;
+    transition: background 0.15s ease;
+  }
+
+  .dropdown-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--color-text);
+  }
+
+  .dropdown-item.detected {
+    background: rgba(201, 166, 107, 0.15);
+  }
+
+  .dropdown-item.detected .file-ext {
+    display: none;
+  }
+
+  .dropdown-item.detected::after {
+    content: 'Detected';
+    margin-left: auto;
+    font-size: 0.75rem;
+    color: var(--color-primary);
+    font-weight: 500;
+  }
+
+  .dropdown-item-secondary {
+    color: var(--color-text-muted);
+  }
+
+  .platform-icon {
+    width: 1.25rem;
+    height: 1.25rem;
+    flex-shrink: 0;
+  }
+
+  .file-ext {
+    margin-left: auto;
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    font-family: ui-monospace, monospace;
+  }
+
+  .dropdown-divider {
+    height: 1px;
+    background: var(--color-border);
+    margin: 0.5rem 0;
+  }
+
+  .version-label {
+    font-size: 0.875rem;
+    font-family: system-ui, -apple-system, sans-serif;
+    color: var(--color-text-muted);
+  }
+</style>
