@@ -6,8 +6,6 @@ on:
     workflows: ["Release"]
     types:
       - completed
-    branches:
-      - main
   # Allow manual trigger
   workflow_dispatch:
   # Also deploy on changes to the www directory
