@@ -29,6 +29,7 @@ impl Plugin for MouseInteractionPlugin {
                     mouse_interaction_system,
                     handle_double_clicks,
                     handle_entity_clicks,
+                    handle_tile_clicks,
                 )
                     .chain()
                     .in_set(MouseInteractionSet)
@@ -39,7 +40,6 @@ impl Plugin for MouseInteractionPlugin {
 
 #[derive(Resource, Default)]
 struct InteractionState {
-    last_tile: Option<(i32, i32)>,
     last_entity: Option<Entity>,
 }
 
@@ -62,6 +62,7 @@ fn mouse_interaction_system(
     mut hover_events: MessageWriter<EntityHoverEvent>,
     mut click_events: MessageWriter<EntityClickEvent>,
     mut tile_click_events: MessageWriter<TileClickEvent>,
+    map_collision: Option<Res<crate::ecs::collision::MapCollisionData>>,
 ) {
     let Some(window_surface) = window_surface else {
         return;
@@ -82,6 +83,20 @@ fn mouse_interaction_system(
     let screen = Vec2::new(cursor.x * cursor_scale, cursor.y * cursor_scale);
     let tile = screen_to_iso_tile(screen, cam_pos, win_size, zoom);
     let tile_i = (tile.x.floor() as i32, tile.y.floor() as i32);
+
+    let frac = tile - Vec2::new(tile_i.0 as f32, tile_i.1 as f32);
+    let mut is_right = frac.x >= frac.y;
+
+    if let Some((left_id, right_id)) = map_collision
+        .as_ref()
+        .and_then(|c| c.get_walls_at(tile_i.0.max(0) as u8, tile_i.1.max(0) as u8))
+    {
+        let left_visible = left_id % 10000 > 2;
+        let right_visible = right_id % 10000 > 2;
+        if left_visible != right_visible {
+            is_right = right_visible;
+        }
+    }
 
     // Find hovered entities
     let mut hits = Vec::new();
@@ -119,11 +134,6 @@ fn mouse_interaction_system(
         interaction_state.last_entity = current_entity;
     }
 
-    // Update last hover for logging/debouncing
-    if interaction_state.last_tile != Some(tile_i) {
-        interaction_state.last_tile = Some(tile_i);
-    }
-
     // Handle Clicks
     if buttons.just_pressed(MouseButton::Left) {
         if let Some((entity, _, _, _, _)) = hits.first() {
@@ -132,7 +142,13 @@ fn mouse_interaction_system(
                 button: MouseButton::Left,
                 is_double_click: false,
             });
-            tracing::info!("Clicked Entity {:?}", entity);
+        } else {
+            tile_click_events.write(TileClickEvent {
+                tile_x: tile_i.0,
+                tile_y: tile_i.1,
+                is_right,
+                button: MouseButton::Left,
+            });
         }
     }
 
@@ -143,12 +159,12 @@ fn mouse_interaction_system(
                 button: MouseButton::Right,
                 is_double_click: false,
             });
-            tracing::info!("Right Clicked Entity {:?}", entity);
         }
 
         tile_click_events.write(TileClickEvent {
             tile_x: tile_i.0,
             tile_y: tile_i.1,
+            is_right,
             button: MouseButton::Right,
         });
     }
@@ -186,8 +202,6 @@ fn handle_double_clicks(
     for event in double_click_events.read() {
         let screen = Vec2::new(event.0 * cursor_scale, event.1 * cursor_scale);
         let tile = screen_to_iso_tile(screen, cam_pos, win_size, zoom);
-        let tile_i = (tile.x.floor() as i32, tile.y.floor() as i32);
-        tracing::info!("Double click at screen {:?} -> tile {:?}", screen, tile_i);
 
         let mut hits = Vec::new();
         for (entity, pos, hitbox) in entity_query.iter() {
@@ -215,7 +229,6 @@ fn handle_double_clicks(
                 button: MouseButton::Left,
                 is_double_click: true,
             });
-            tracing::info!("Double Clicked Entity {:?}", entity);
         }
     }
 }
@@ -253,27 +266,56 @@ fn handle_entity_clicks(
                         profile_events.write(ShowSelfProfileEvent::SelfRequested);
                         // Also send to server (for future use)
                         outbox.send(&SelfProfileRequest {});
-                        tracing::info!("Showing self profile (Double Click)");
                     } else if item.is_some() {
                         outbox.send(&Pickup {
                             destination_slot: 0,
                             source_point: (position.x as u16, position.y as u16),
                         });
-                        tracing::info!("Sent Pickup (Double Click)");
                     } else if player.is_some() {
                         // Optimistically clear previous other player data
                         profile_events.write(ShowSelfProfileEvent::OtherRequested);
-                        outbox.send(&Click::TargetId(entity_id.id));
-                        tracing::info!("Sent Click (Double Click Player): {}", entity_id.id);
+                        outbox.send(&Click::TargetEntity(entity_id.id));
                     } else if npc.is_some() {
-                        outbox.send(&Click::TargetId(entity_id.id));
-                        tracing::info!("Sent Click (Double Click NPC): {}", entity_id.id);
+                        outbox.send(&Click::TargetEntity(entity_id.id));
                     }
                 } else {
                     // Single click for players/NPCs is now ignored here to prevent
                     // opening profiles on single clicks. Targeting is handled
                     // separately by spell systems or client-side selection.
                 }
+            }
+        }
+    }
+}
+
+fn handle_tile_clicks(
+    mut events: MessageReader<TileClickEvent>,
+    outbox: Res<PacketOutbox>,
+    map_collision: Option<Res<crate::ecs::collision::MapCollisionData>>,
+) {
+    for event in events.read() {
+        if event.button == MouseButton::Left {
+            let x = event.tile_x.max(0) as u16;
+            let y = event.tile_y.max(0) as u16;
+
+            let has_wall = map_collision
+                .as_ref()
+                .and_then(|c| c.get_walls_at(x as u8, y as u8))
+                .map(|(l, r)| {
+                    if event.is_right {
+                        r % 10000 > 2
+                    } else {
+                        l % 10000 > 2
+                    }
+                })
+                .unwrap_or(false);
+
+            if has_wall {
+                outbox.send(&Click::TargetWall {
+                    x,
+                    y,
+                    is_right: event.is_right,
+                });
             }
         }
     }

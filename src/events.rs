@@ -132,5 +132,6 @@ pub struct EntityClickEvent {
 pub struct TileClickEvent {
     pub tile_x: i32,
     pub tile_y: i32,
+    pub is_right: bool,
     pub button: MouseButton,
 }

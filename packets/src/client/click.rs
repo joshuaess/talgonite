@@ -4,8 +4,8 @@ use super::Codes;
 
 #[derive(Debug)]
 pub enum Click {
-    TargetId(u32),
-    TargetPoint((u16, u16)),
+    TargetEntity(u32),
+    TargetWall { x: u16, y: u16, is_right: bool },
 }
 
 impl ToBytes for Click {
@@ -13,14 +13,15 @@ impl ToBytes for Click {
 
     fn write_payload(&self, bytes: &mut Vec<u8>) {
         match self {
-            Click::TargetId(id) => {
+            Click::TargetEntity(id) => {
                 bytes.push(1);
                 bytes.extend_from_slice(&id.to_be_bytes());
             }
-            Click::TargetPoint((x, y)) => {
+            Click::TargetWall { x, y, is_right } => {
                 bytes.push(3);
                 bytes.extend_from_slice(&x.to_be_bytes());
                 bytes.extend_from_slice(&y.to_be_bytes());
+                bytes.push(*is_right as u8);
             }
         }
     }
