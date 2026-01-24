@@ -210,11 +210,12 @@ impl ItemBatch {
                 (allocation.rectangle.min.y as f32 + frame_h) / atlas_h,
             ),
             Vec2::new(frame_w / 512., frame_h / 512.),
-            store
+            (store
                 .palette_table
                 .get(&item.sprite)
                 .copied()
                 .unwrap_or_default() as f32
+                + 0.5)
                 / 256.,
             -1.,
             false,
@@ -285,7 +286,13 @@ impl ItemBatch {
                 (allocation.rectangle.min.y as f32 + frame_h) / atlas_h,
             ),
             Vec2::new(frame_w / 512., frame_h / 512.),
-            item.color as f32 / 256.,
+            (store
+                .palette_table
+                .get(&item.sprite)
+                .copied()
+                .unwrap_or_default() as f32
+                + 0.5)
+                / 256.,
             -1.,
             false,
             false,
