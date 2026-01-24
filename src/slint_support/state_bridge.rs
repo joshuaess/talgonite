@@ -543,14 +543,16 @@ pub fn apply_core_to_slint(
             crate::webui::ipc::CoreToUi::DisplayMenuTextEntry {
                 title,
                 text,
+                prompt,
                 sprite_id,
                 args,
                 pursuit_id,
+                entries,
             } => {
                 let npc_dialog = slint::ComponentHandle::global::<crate::NpcDialogState>(&strong);
                 npc_dialog.set_npc_name(slint::SharedString::from(title.as_str()));
                 npc_dialog.set_dialog_text(slint::SharedString::from(text.as_str()));
-                npc_dialog.set_text_entry_prompt(slint::SharedString::from(text.as_str()));
+                npc_dialog.set_text_entry_prompt(slint::SharedString::from(prompt.as_str()));
                 npc_dialog.set_text_entry_args(slint::SharedString::from(args.as_str()));
                 npc_dialog.set_text_entry_pursuit_id(*pursuit_id as i32);
 
@@ -560,7 +562,20 @@ pub fn apply_core_to_slint(
                     npc_dialog.set_npc_portrait(slint::Image::default());
                 }
 
+                let mut slint_entries = Vec::with_capacity(entries.len());
+                for entry in entries {
+                    slint_entries.push(crate::MenuEntry {
+                        text: slint::SharedString::from(entry.text.as_str()),
+                        id: entry.id as i32,
+                        icon: slint::Image::default(),
+                        cost: entry.cost,
+                    });
+                }
+
+                npc_dialog
+                    .set_menu_entries(slint::ModelRc::new(slint::VecModel::from(slint_entries)));
                 npc_dialog.set_text_entry_visible(true);
+                npc_dialog.set_is_shop(false);
                 npc_dialog.set_visible(true);
             }
             crate::webui::ipc::CoreToUi::SettingsSync {

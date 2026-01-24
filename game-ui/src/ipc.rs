@@ -215,10 +215,12 @@ pub enum CoreToUi {
     DisplayMenuTextEntry {
         title: String,
         text: String,
+        prompt: String,
         sprite_id: u16,
         /// Context arg (e.g., item name)
         args: String,
         pursuit_id: u16,
+        entries: Vec<MenuEntryUi>,
     },
     SettingsSync {
         xray_size: u8,

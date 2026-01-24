@@ -1302,6 +1302,8 @@ fn bridge_session_events(
                             ));
                         }
 
+                        let mut is_text_entry = false;
+                        let mut prompt = String::new();
                         match payload {
                             packets::server::DisplayDialogPayload::DialogMenu { options }
                             | packets::server::DisplayDialogPayload::CreatureMenu { options } => {
@@ -1313,6 +1315,10 @@ fn bridge_session_events(
                                     ));
                                 }
                             }
+                            packets::server::DisplayDialogPayload::TextEntry { info } => {
+                                is_text_entry = true;
+                                prompt = info.prompt.clone();
+                            }
                             _ => {}
                         }
 
@@ -1323,14 +1329,26 @@ fn bridge_session_events(
                             ));
                         }
 
-                        outbound.write(UiOutbound(CoreToUi::DisplayMenu {
-                            title: header.name.clone(),
-                            text: header.text.clone(),
-                            sprite_id: header.sprite,
-                            entry_type: crate::webui::ipc::MenuEntryType::TextOptions,
-                            pursuit_id: header.pursuit_id,
-                            entries,
-                        }));
+                        if is_text_entry {
+                            outbound.write(UiOutbound(CoreToUi::DisplayMenuTextEntry {
+                                title: header.name.clone(),
+                                text: header.text.clone(),
+                                prompt,
+                                sprite_id: header.sprite,
+                                args: String::new(),
+                                pursuit_id: header.pursuit_id,
+                                entries,
+                            }));
+                        } else {
+                            outbound.write(UiOutbound(CoreToUi::DisplayMenu {
+                                title: header.name.clone(),
+                                text: header.text.clone(),
+                                sprite_id: header.sprite,
+                                entry_type: crate::webui::ipc::MenuEntryType::TextOptions,
+                                pursuit_id: header.pursuit_id,
+                                entries,
+                            }));
+                        }
                     }
                     packets::server::DisplayDialog::Close => {
                         menu_ctx.dialog_id = None;
@@ -1527,9 +1545,11 @@ fn bridge_session_events(
                     outbound.write(UiOutbound(CoreToUi::DisplayMenuTextEntry {
                         title: pkt.header.name.clone(),
                         text: pkt.header.text.clone(),
+                        prompt: pkt.header.text.clone(),
                         sprite_id: pkt.header.sprite,
                         args: menu_ctx.args.clone(),
                         pursuit_id: menu_ctx.pursuit_id,
+                        entries,
                     }));
                 } else {
                     outbound.write(UiOutbound(CoreToUi::DisplayMenu {
