@@ -365,7 +365,7 @@ pub fn input_handling_system(
             const WALK_COOLDOWN_SECS: f32 = 0.5;
             if *current_direction != new_direction {
                 player_actions.write(PlayerAction::Turn {
-                    direction: new_direction as u8,
+                    direction: new_direction,
                     source: InputSource::Manual,
                 });
                 *current_direction = new_direction;
@@ -382,7 +382,7 @@ pub fn input_handling_system(
                     let walk_ready = input_timer.primed || input_timer.walk_cd.is_finished();
                     if walk_ready && (any_just_pressed || input_timer.walk_cd.is_finished()) {
                         player_actions.write(PlayerAction::Walk {
-                            direction: new_direction as u8,
+                            direction: new_direction,
                             source: InputSource::Manual,
                         });
                         input_timer.walk_cd =

@@ -203,8 +203,8 @@ fn process_net_packets(
                         entity_events.write(EntityEvent::Walk(q));
                     }
                 }
-                &server::Codes::CreatureTurn => {
-                    if let Some(q) = parse_packet::<server::CreatureTurn>(data) {
+                &server::Codes::EntityTurn => {
+                    if let Some(q) = parse_packet::<server::EntityTurn>(data) {
                         entity_events.write(EntityEvent::Turn(q));
                     }
                 }

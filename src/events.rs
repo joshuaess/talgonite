@@ -1,6 +1,8 @@
 use bevy::prelude::{Entity, Message, MouseButton};
 use packets::{client, server};
 
+use crate::ecs::components::Direction;
+
 // === Network Events ===
 
 #[derive(Debug, Clone, Message)]
@@ -18,7 +20,7 @@ pub enum EntityEvent {
     DisplayEntities(server::DisplayVisibleEntities),
     Remove(server::RemoveEntity),
     Walk(server::CreatureWalk),
-    Turn(server::CreatureTurn),
+    Turn(server::EntityTurn),
     Animate(server::BodyAnimation),
     Effect(server::Animation),
     HealthBar(server::HealthBar),
@@ -78,8 +80,14 @@ pub enum InputSource {
 
 #[derive(Debug, Clone, Message)]
 pub enum PlayerAction {
-    Walk { direction: u8, source: InputSource },
-    Turn { direction: u8, source: InputSource },
+    Walk {
+        direction: Direction,
+        source: InputSource,
+    },
+    Turn {
+        direction: Direction,
+        source: InputSource,
+    },
 }
 
 impl PlayerAction {

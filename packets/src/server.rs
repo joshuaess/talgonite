@@ -33,8 +33,8 @@ pub use connection_info::ConnectionInfo;
 mod cooldown;
 pub use cooldown::{Cooldown, CooldownType};
 
-mod creature_turn;
-pub use creature_turn::CreatureTurn;
+mod entity_turn;
+pub use entity_turn::EntityTurn;
 
 mod creature_walk;
 pub use creature_walk::CreatureWalk;
@@ -255,7 +255,7 @@ pub enum Codes {
     /// <summary>
     ///     OpCode used to send a client another creature's turn
     /// </summary>
-    CreatureTurn = 17,
+    EntityTurn = 17,
 
     /// <summary>
     ///     OpCode used to display a creature's health bar

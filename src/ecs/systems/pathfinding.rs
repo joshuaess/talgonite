@@ -146,7 +146,7 @@ pub fn pathfinding_execution_system(
             };
 
             player_actions.write(PlayerAction::Walk {
-                direction: direction as u8,
+                direction,
                 source: InputSource::Pathfinding,
             });
         }

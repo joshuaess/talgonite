@@ -2,6 +2,7 @@ use bevy::ecs::lifecycle::HookContext;
 use bevy::ecs::world::DeferredWorld;
 use bevy::prelude::*;
 use bevy::tasks::Task;
+use packets::types::Direction as PacketDirection;
 use rendering::scene::items::ItemInstanceHandle;
 use rendering::scene::map::renderer::PreparedMap;
 use rendering::scene::{
@@ -56,6 +57,28 @@ impl From<u8> for Direction {
             2 => Direction::Down,
             3 => Direction::Left,
             _ => Direction::Down,
+        }
+    }
+}
+
+impl From<PacketDirection> for Direction {
+    fn from(value: PacketDirection) -> Self {
+        match value {
+            PacketDirection::Up => Direction::Up,
+            PacketDirection::Right => Direction::Right,
+            PacketDirection::Down => Direction::Down,
+            PacketDirection::Left => Direction::Left,
+        }
+    }
+}
+
+impl Into<PacketDirection> for Direction {
+    fn into(self) -> PacketDirection {
+        match self {
+            Direction::Up => PacketDirection::Up,
+            Direction::Right => PacketDirection::Right,
+            Direction::Down => PacketDirection::Down,
+            Direction::Left => PacketDirection::Left,
         }
     }
 }

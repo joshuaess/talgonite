@@ -26,7 +26,10 @@ pub fn player_movement_system(
     // Handle walk requests from input
     for event in player_actions.read() {
         match event {
-            PlayerAction::Walk { direction, source: _ } => {
+            PlayerAction::Walk {
+                direction,
+                source: _,
+            } => {
                 if handle_walk_request(
                     *direction,
                     &map_query,
@@ -38,16 +41,19 @@ pub fn player_movement_system(
                 ) {
                     if let Some(outbox) = &outbox {
                         outbox.send(&client::ClientWalk {
-                            direction: *direction,
+                            direction: (*direction).into(),
                             step_count: 1,
                         });
                     }
                 }
             }
-            PlayerAction::Turn { direction, source: _ } => {
+            PlayerAction::Turn {
+                direction,
+                source: _,
+            } => {
                 if let Some(outbox) = &outbox {
                     outbox.send(&client::Turn {
-                        direction: *direction,
+                        direction: (*direction).into(),
                     });
                 }
             }
@@ -67,7 +73,7 @@ pub fn player_movement_system(
 }
 
 fn handle_walk_request(
-    direction: u8,
+    direction: Direction,
     map_query: &Query<&GameMap>,
     player_query: &mut Query<(Entity, &mut Position, &mut Direction), With<LocalPlayer>>,
     entity_positions: &Query<&Position, (Or<(With<NPC>, With<Player>)>, Without<LocalPlayer>)>,
@@ -84,11 +90,10 @@ fn handle_walk_request(
     };
 
     let (dx, dy) = match direction {
-        0 => (0, -1), // up
-        1 => (1, 0),  // right
-        2 => (0, 1),  // down
-        3 => (-1, 0), // left
-        _ => return false,
+        Direction::Up => (0, -1),   // up
+        Direction::Right => (1, 0), // right
+        Direction::Down => (0, 1),  // down
+        Direction::Left => (-1, 0), // left
     };
 
     let new_dir = Direction::from(direction);
