@@ -1,5 +1,6 @@
 use anyhow::anyhow;
 use async_std::net::TcpStream;
+use async_std::sync::Arc;
 use packets::{
     ToBytes, TryFromBytes, client,
     server::{self, LoginMessageType},
@@ -32,6 +33,7 @@ impl PreLoginSession {
         let connection_string = format!("{}:{}", server_address, server_port);
         let stream = TcpStream::connect(&connection_string).await?;
         tracing::info!("Connected to lobby server.");
+        let stream = Arc::new(stream);
         let mut decoder = PacketDecoder::new(stream.clone());
         let mut encoder = PacketEncoder::new(stream);
 
@@ -80,6 +82,7 @@ impl PreLoginSession {
         };
 
         let stream = TcpStream::connect(redirect.addr).await?;
+        let stream = Arc::new(stream);
         let mut decoder = PacketDecoder::new(stream.clone());
         let mut encoder = PacketEncoder::new(stream);
 
@@ -154,6 +157,7 @@ impl PreLoginSession {
         };
 
         let stream = TcpStream::connect(redirect.addr).await.unwrap();
+        let stream = Arc::new(stream);
         let mut encoder = PacketEncoder::new(stream.clone());
 
         encoder.write(&redirect_response.to_bytes()).await.unwrap();

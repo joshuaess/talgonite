@@ -55,7 +55,6 @@ impl Plugin for UiBridgePlugin {
             .init_resource::<crate::ecs::hotbar::HotbarState>()
             .init_resource::<crate::ecs::hotbar::HotbarPanelState>()
             .init_resource::<ActiveMenuContext>()
-            .add_message::<LoginResultEvt>()
             .init_resource::<CursorPosition>()
             .init_resource::<ButtonInput<KeyCode>>()
             .init_resource::<ButtonInput<MouseButton>>()
@@ -2004,17 +2003,17 @@ struct LoginTaskInner {
     password: Option<String>,
 }
 
-#[derive(Message)]
-struct LoginResultEvt(
-    Result<(network::DecryptedReceiver, network::EncryptedSender), LoginError>,
-    LoginTaskInner,
+#[derive(Component)]
+struct LoginResultComp(
+    Option<network::DecryptedReceiver>,
+    Option<network::EncryptedSender>,
+    Option<LoginTaskInner>,
 );
 
-fn handle_login_tasks(
-    mut commands: Commands,
-    mut q: Query<(Entity, &mut LoginTaskEntity)>,
-    mut res_evt: MessageWriter<LoginResultEvt>,
-) {
+#[derive(Component)]
+struct LoginErrorComp(LoginError, LoginTaskInner);
+
+fn handle_login_tasks(mut commands: Commands, mut q: Query<(Entity, &mut LoginTaskEntity)>) {
     for (e, mut task_wrap) in &mut q {
         if let Some(res) = future::block_on(future::poll_once(&mut task_wrap.0.task)) {
             println!("[webui] LoginTask completed: success={}.", res.is_ok());
@@ -2029,7 +2028,15 @@ fn handle_login_tasks(
                     password: None,
                 },
             );
-            res_evt.write(LoginResultEvt(res, inner));
+
+            match res {
+                Ok((rx, tx)) => {
+                    commands.spawn(LoginResultComp(Some(rx), Some(tx), Some(inner)));
+                }
+                Err(err) => {
+                    commands.spawn(LoginErrorComp(err, inner));
+                }
+            }
             commands.entity(e).despawn();
         }
     }
@@ -2046,119 +2053,144 @@ fn parse_host_port(address: &str) -> Option<(String, u16)> {
 }
 
 fn handle_login_results(
-    mut events: MessageReader<LoginResultEvt>,
+    mut commands: Commands,
+    mut success_q: Query<(Entity, &mut LoginResultComp)>,
+    mut error_q: Query<(Entity, &mut LoginErrorComp)>,
     mut outbound: MessageWriter<UiOutbound>,
     mut settings: ResMut<SettingsFile>,
     mut next_state: ResMut<NextState<AppState>>,
-    _app_state: Res<State<AppState>>,
-    mut commands: Commands,
 ) {
-    for LoginResultEvt(res, inner) in events.read() {
-        match res {
-            Ok((receiver, sender)) => {
-                println!(
-                    "[webui] LoginResult: success for user {} on server {}",
-                    inner.username, inner.server_id
-                );
-                // Install network manager and spawn background receive task piping into NetEventRx
-                use crate::network::NetworkManager;
-                use crate::session::runtime::{NetBgTask, NetEventRx};
-                commands.insert_resource(NetworkManager::new(sender.clone()));
-                let (tx, rx) = crossbeam_channel::unbounded::<crate::events::NetworkEvent>();
-                commands.insert_resource(NetEventRx(rx));
+    for (e, mut res) in &mut success_q {
+        let (receiver, sender, inner) = {
+            let LoginResultComp(rx, tx, inner) = &mut *res;
+            (rx.take(), tx.take(), inner.take())
+        };
 
-                // Spawn the background receiver task
-                let mut rx_loop = receiver.clone();
-                let tx_for_task = tx.clone();
-                let task = IoTaskPool::get().spawn(async move {
-                    loop {
-                        match rx_loop.receive().await {
-                            Ok((packet_id, packet_data)) => {
-                                match packets::server::Codes::try_from(packet_id) {
-                                    Ok(code) => {
-                                        let _ = tx_for_task.send(
-                                            crate::events::NetworkEvent::Packet(code, packet_data),
-                                        );
-                                    }
-                                    Err(_) => (),
-                                }
+        if receiver.is_none() || sender.is_none() || inner.is_none() {
+            continue;
+        }
+        let receiver: network::DecryptedReceiver = receiver.unwrap();
+        let sender: network::EncryptedSender = sender.unwrap();
+        let inner: LoginTaskInner = inner.unwrap();
+
+        commands.entity(e).despawn();
+
+        println!(
+            "[webui] LoginResult: success for user {} on server {}",
+            inner.username, inner.server_id
+        );
+        // Install network manager and spawn background receive task piping into NetEventRx
+        use crate::session::runtime::{NetBgTask, NetEventRx};
+        let (tx, rx) = crossbeam_channel::unbounded::<crate::events::NetworkEvent>();
+        commands.insert_resource(NetEventRx(rx));
+
+        let (outbox_tx, outbox_rx) = async_channel::unbounded::<Vec<u8>>();
+        commands.insert_resource(crate::network::PacketOutbox(outbox_tx));
+
+        // Spawn the background receiver task
+        let tx_for_task = tx.clone();
+        let reader_task = IoTaskPool::get().spawn(async move {
+            let mut rx_loop = receiver;
+            loop {
+                match rx_loop.receive().await {
+                    Ok((packet_id, packet_data)) => {
+                        match packets::server::Codes::try_from(packet_id) {
+                            Ok(code) => {
+                                let _ = tx_for_task.send(
+                                    crate::events::NetworkEvent::Packet(code, packet_data),
+                                );
                             }
-                            Err(_) => {
-                                let _ = tx_for_task.send(crate::events::NetworkEvent::Disconnected);
-                                break;
-                            }
+                            Err(_) => (),
                         }
                     }
-                });
-                commands.spawn(NetBgTask(task));
-                // Emit connected event to seed tick timers
-                let _ = tx.send(crate::events::NetworkEvent::Connected);
-                // On success, if remember was requested, persist cred and password
-                if inner.remember {
-                    let now = std::time::SystemTime::now()
-                        .duration_since(std::time::UNIX_EPOCH)
-                        .map(|d| d.as_millis() as u64)
-                        .unwrap_or(0);
-                    if let Some(pw) = &inner.password {
-                        let _ = keyring::set_password(&inner.cred_id, pw);
-                    }
-                    // Upsert saved credential record
-                    if let Some(existing) = settings
-                        .saved_credentials
-                        .iter_mut()
-                        .find(|c| c.id == inner.cred_id)
-                    {
-                        existing.last_used = now;
-                        existing.username = inner.username.clone();
-                        existing.server_id = inner.server_id;
-                    } else {
-                        settings.saved_credentials.push(SavedCredential {
-                            id: inner.cred_id.clone(),
-                            server_id: inner.server_id,
-                            username: inner.username.clone(),
-                            last_used: now,
-                            preview: None,
-                        });
+                    Err(_) => {
+                        let _ = tx_for_task.send(crate::events::NetworkEvent::Disconnected);
+                        break;
                     }
                 }
-                let server_url = settings
-                    .servers
-                    .iter()
-                    .find(|s| s.id == inner.server_id)
-                    .map(|s| s.address.clone())
-                    .unwrap_or_default();
-
-                commands.insert_resource(crate::CurrentSession {
-                    username: inner.username.clone(),
-                    server_id: inner.server_id,
-                    server_url,
-                });
-
-                let hotbars = settings.get_hotbars(inner.server_id, &inner.username);
-                let mut hotbar_state = crate::ecs::hotbar::HotbarState::new();
-                hotbar_state.config = hotbars;
-                commands.insert_resource(hotbar_state);
-                commands.insert_resource(crate::ecs::hotbar::HotbarPanelState::default());
-
-                next_state.set(AppState::InGame);
-                outbound.write(UiOutbound(CoreToUi::EnteredGame));
             }
-            Err(code) => {
-                println!(
-                    "[webui] LoginResult: failed with code {:?} for user {} on server {}",
-                    code, inner.username, inner.server_id
-                );
-                // Login failed: keep user on the current screen (login) and emit error
-                let logins_public: Vec<SavedCredentialPublic> =
-                    settings.saved_credentials.iter().map(to_public).collect();
-                outbound.write(UiOutbound(CoreToUi::Snapshot {
-                    servers: settings.servers.clone(),
-                    current_server_id: settings.gameplay.current_server_id,
-                    logins: logins_public,
-                    login_error: Some(code.clone()),
-                }));
+        });
+
+        // Spawn the background writer task
+        let writer_task = IoTaskPool::get().spawn(async move {
+            let mut tx_loop = sender;
+            while let Ok(packet) = outbox_rx.recv().await {
+                if let Err(_) = tx_loop.send(&packet).await {
+                    break;
+                }
+            }
+        });
+
+        commands.spawn(NetBgTask(reader_task));
+        commands.spawn(NetBgTask(writer_task));
+        // Emit connected event to seed tick timers
+        let _ = tx.send(crate::events::NetworkEvent::Connected);
+        // On success, if remember was requested, persist cred and password
+        if inner.remember {
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_millis() as u64)
+                .unwrap_or(0);
+            if let Some(pw) = &inner.password {
+                let _ = keyring::set_password(&inner.cred_id, pw);
+            }
+            // Upsert saved credential record
+            if let Some(existing) = settings
+                .saved_credentials
+                .iter_mut()
+                .find(|c| c.id == inner.cred_id)
+            {
+                existing.last_used = now;
+                existing.username = inner.username.clone();
+                existing.server_id = inner.server_id;
+            } else {
+                settings.saved_credentials.push(SavedCredential {
+                    id: inner.cred_id.clone(),
+                    server_id: inner.server_id,
+                    username: inner.username.clone(),
+                    last_used: now,
+                    preview: None,
+                });
             }
         }
+        let server_url = settings
+            .servers
+            .iter()
+            .find(|s| s.id == inner.server_id)
+            .map(|s| s.address.clone())
+            .unwrap_or_default();
+
+        commands.insert_resource(crate::CurrentSession {
+            username: inner.username.clone(),
+            server_id: inner.server_id,
+            server_url,
+        });
+
+        let hotbars = settings.get_hotbars(inner.server_id, &inner.username);
+        let mut hotbar_state = crate::ecs::hotbar::HotbarState::new();
+        hotbar_state.config = hotbars;
+        commands.insert_resource(hotbar_state);
+        commands.insert_resource(crate::ecs::hotbar::HotbarPanelState::default());
+
+        next_state.set(AppState::InGame);
+        outbound.write(UiOutbound(CoreToUi::EnteredGame));
+    }
+
+    for (e, err) in &mut error_q {
+        println!(
+            "[webui] LoginResult: failed with code {:?} for user {} on server {}",
+            err.0, err.1.username, err.1.server_id
+        );
+        // Login failed: keep user on the current screen (login) and emit error
+        let logins_public: Vec<SavedCredentialPublic> =
+            settings.saved_credentials.iter().map(to_public).collect();
+        outbound.write(UiOutbound(CoreToUi::Snapshot {
+            servers: settings.servers.clone(),
+            current_server_id: settings.gameplay.current_server_id,
+            logins: logins_public,
+            login_error: Some(err.0.clone()),
+        }));
+        commands.entity(e).despawn();
     }
 }
 

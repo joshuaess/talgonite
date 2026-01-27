@@ -10,7 +10,7 @@ use crate::webui::plugin::{
     AbilityState, ActiveMenuContext, EquipmentState, InventoryState, PlayerProfileState,
     WorldListState,
 };
-use crate::{MapRendererState, network::{NetworkManager, PacketOutbox}};
+use crate::{MapRendererState, network::PacketOutbox};
 use crate::ecs::hotbar::{HotbarPanelState, HotbarState};
 use crate::session::runtime::{NetBgTask, NetEventRx, NetSessionState};
 
@@ -69,7 +69,6 @@ pub fn cleanup_ingame_resources(
         commands.entity(e).despawn();
     }
 
-    commands.remove_resource::<NetworkManager>();
     commands.remove_resource::<NetEventRx>();
 
     if let Some(mut state) = inventory {

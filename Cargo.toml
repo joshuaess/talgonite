@@ -48,6 +48,7 @@ packets.workspace = true
 crc.workspace = true
 tracing-subscriber.workspace = true
 tracing.workspace = true
+async-channel = "2.3"
 network.workspace = true
 game-types.workspace = true
 game-input.workspace = true

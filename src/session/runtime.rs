@@ -58,8 +58,7 @@ impl Plugin for SessionRuntimePlugin {
                 PreUpdate,
                 drain_net_events.run_if(in_state(AppState::InGame)),
             )
-            .add_systems(Update, (process_net_packets, send_client_actions))
-            .add_systems(PostUpdate, crate::network::flush_packet_outbox);
+            .add_systems(Update, (process_net_packets, send_client_actions));
     }
 }
 
@@ -75,7 +74,7 @@ fn drain_net_events(rx: Res<NetEventRx>, mut writer: MessageWriter<NetworkEvent>
 #[allow(dead_code)]
 pub struct NetBgTask(pub Task<()>);
 
-// Core network packet processor -> emits GameEvent and sends replies via NetworkManager
+// Core network packet processor -> emits GameEvent and sends replies via PacketOutbox
 fn process_net_packets(
     mut net_events: MessageReader<NetworkEvent>,
     mut session: ResMut<NetSessionState>,

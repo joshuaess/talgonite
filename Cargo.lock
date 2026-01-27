@@ -6690,6 +6690,7 @@ name = "talgonite"
 version = "0.1.2"
 dependencies = [
  "anyhow",
+ "async-channel 2.5.0",
  "async-std",
  "base64",
  "bevy",
