@@ -14,6 +14,7 @@ pub mod events;
 pub mod game_files;
 pub mod input;
 pub mod map_store;
+pub mod metafile_store;
 pub mod network;
 pub mod plugins;
 pub mod render_plugin;
@@ -78,6 +79,7 @@ impl Plugin for CorePlugin {
             plugins::input::InputPlugin,
         ))
         .insert_resource(map_store::MapStore::new())
+        .insert_resource(metafile_store::MetafileStore::new())
         .init_state::<app_state::AppState>()
         .add_systems(
             OnEnter(app_state::AppState::MainMenu),

@@ -21,6 +21,7 @@ pub struct NetEventRx(pub crossbeam_channel::Receiver<NetworkEvent>);
 pub struct NetSessionState {
     start_time: Instant,
     map_download: MapDownloadState,
+    metadata_requested: bool,
 }
 
 impl Default for NetSessionState {
@@ -28,6 +29,7 @@ impl Default for NetSessionState {
         Self {
             start_time: Instant::now(),
             map_download: MapDownloadState::None,
+            metadata_requested: false,
         }
     }
 }
@@ -46,6 +48,7 @@ impl Default for MapDownloadState {
         MapDownloadState::None
     }
 }
+
 
 pub struct SessionRuntimePlugin;
 
@@ -88,6 +91,7 @@ fn process_net_packets(
     mut chat_events: MessageWriter<ChatEvent>,
     mut session_events: MessageWriter<SessionEvent>,
     map_store: Res<crate::map_store::MapStore>,
+    mut metafile_store: ResMut<crate::metafile_store::MetafileStore>,
 ) {
     for evt in net_events.read() {
         match evt {
@@ -305,8 +309,18 @@ fn process_net_packets(
                 }
                 &server::Codes::DisplayDialog => {
                     if let Some(q) = parse_packet::<server::DisplayDialog>(data) {
-                        tracing::info!("Received DisplayDialog: {:?}", q);
+                        tracing::debug!("Received DisplayDialog: {:?}", q);
                         session_events.write(SessionEvent::DisplayDialog(q));
+                    }
+                }
+                &server::Codes::MapLoadComplete => {
+                    if let Some(_) = parse_packet::<server::MapLoadComplete>(data) {
+                        handle_map_load_complete(&mut session, &outbox);
+                    }
+                }
+                &server::Codes::MetaData => {
+                    if let Some(q) = parse_packet::<server::MetaData>(data) {
+                        handle_metadata(&outbox, &mut metafile_store, q);
                     }
                 }
                 e => {
@@ -511,6 +525,80 @@ fn parse_packet<T: TryFromBytes>(data: &Vec<u8>) -> Option<T> {
                 "Failed to parse packet"
             );
             None
+        }
+    }
+}
+
+fn handle_map_load_complete(
+    session: &mut NetSessionState,
+    outbox: &crate::network::PacketOutbox,
+) {
+    // Only request metadata checksums once per session
+    if !session.metadata_requested {
+        tracing::info!("Map load complete, requesting metadata checksums");
+        session.metadata_requested = true;
+        outbox.send(&client::MetaDataRequest::AllCheckSums);
+    }
+}
+
+fn handle_metadata(
+    outbox: &crate::network::PacketOutbox,
+    metafile_store: &mut crate::metafile_store::MetafileStore,
+    metadata: server::MetaData,
+) {
+    match metadata {
+        server::MetaData::AllCheckSums { collection } => {
+            tracing::info!("Received {} metadata checksums from server", collection.len());
+
+            // Request any metafiles that are missing or have mismatched checksums
+            let mut request_count = 0;
+            for entry in collection {
+                let needs_download = match metafile_store.get_checksum(&entry.name) {
+                    Some(local_checksum) => {
+                        if local_checksum != entry.check_sum {
+                            tracing::debug!(
+                                "Metafile {} checksum mismatch (local {}, server {})",
+                                entry.name,
+                                local_checksum,
+                                entry.check_sum
+                            );
+                            true
+                        } else {
+                            false
+                        }
+                    }
+                    None => {
+                        tracing::debug!("Metafile {} not found locally", entry.name);
+                        true
+                    }
+                };
+
+                if needs_download {
+                    outbox.send(&client::MetaDataRequest::DataByName(entry.name));
+                    request_count += 1;
+                }
+            }
+
+            if request_count > 0 {
+                tracing::info!("Requested {} metafiles from server", request_count);
+            } else {
+                tracing::info!("All metafiles are up to date");
+            }
+        }
+        server::MetaData::DataByName {
+            name,
+            check_sum,
+            data,
+        } => {
+            tracing::debug!(
+                "Received metafile {} ({} bytes, checksum {})",
+                name,
+                data.len(),
+                check_sum
+            );
+
+            // Save the metafile (this validates the checksum)
+            metafile_store.save_metafile(&name, &data, check_sum);
         }
     }
 }

@@ -196,6 +196,7 @@ pub fn apply_core_to_slint(
     win: Res<SlintWindow>,
     asset_loader: Res<SlintAssetLoaderRes>,
     game_files: Res<crate::game_files::GameFiles>,
+    metafile_store: Res<crate::metafile_store::MetafileStore>,
     inventory: Res<crate::webui::plugin::InventoryState>,
     ability: Res<crate::webui::plugin::AbilityState>,
     hotbar: Res<crate::ecs::hotbar::HotbarState>,
@@ -477,7 +478,12 @@ pub fn apply_core_to_slint(
                 npc_dialog.set_npc_name(slint::SharedString::from(title.as_str()));
                 npc_dialog.set_dialog_text(slint::SharedString::from(text.as_str()));
 
-                if let Ok(portrait) = asset_loader.load_npc_portrait(&game_files, *sprite_id) {
+                if let Ok(portrait) = asset_loader.load_npc_portrait(
+                    &game_files,
+                    &metafile_store,
+                    *sprite_id,
+                    Some(title.as_str()),
+                ) {
                     npc_dialog.set_npc_portrait(portrait);
                 } else {
                     npc_dialog.set_npc_portrait(slint::Image::default());
@@ -556,7 +562,12 @@ pub fn apply_core_to_slint(
                 npc_dialog.set_text_entry_args(slint::SharedString::from(args.as_str()));
                 npc_dialog.set_text_entry_pursuit_id(*pursuit_id as i32);
 
-                if let Ok(portrait) = asset_loader.load_npc_portrait(&game_files, *sprite_id) {
+                if let Ok(portrait) = asset_loader.load_npc_portrait(
+                    &game_files,
+                    &metafile_store,
+                    *sprite_id,
+                    Some(title.as_str()),
+                ) {
                     npc_dialog.set_npc_portrait(portrait);
                 } else {
                     npc_dialog.set_npc_portrait(slint::Image::default());
