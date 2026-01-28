@@ -15,9 +15,7 @@ anyhow = "1"
 vk2dfd = "0.1"
 num_enum = "0.7"
 encoding = "0.2"
-flate2 = { version = "1", features = [
-    "cloudflare_zlib",
-], default-features = false }
+flate2 = { version = "1", features = ["zlib-rs"], default-features = false }
 
 # Dependencies for game_files module
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]

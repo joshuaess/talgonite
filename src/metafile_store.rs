@@ -1,6 +1,5 @@
 use crate::storage_dir;
 use bevy::prelude::*;
-use crc::crc32;
 use flate2::read::ZlibDecoder;
 use formats::meta_file::MetaFile;
 use std::collections::HashMap;
@@ -8,6 +7,12 @@ use std::fs;
 use std::io::Read;
 use std::path::PathBuf;
 use tracing::{error, info};
+
+fn crc32(data: &[u8]) -> u32 {
+    let mut crc = flate2::Crc::new();
+    crc.update(data);
+    crc.sum()
+}
 
 #[derive(Resource)]
 pub struct MetafileStore {
@@ -139,7 +144,11 @@ impl MetafileStore {
             }
         }
 
-        info!("Saved metafile {} to disk ({} bytes)", name, decompressed.len());
+        info!(
+            "Saved metafile {} to disk ({} bytes)",
+            name,
+            decompressed.len()
+        );
         true
     }
 }
