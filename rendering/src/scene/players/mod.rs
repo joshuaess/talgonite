@@ -9,6 +9,7 @@ use etagere::Allocation;
 use formats::epf::{AnimationDirection, EpfAnimation, EpfAnimationType};
 use glam::{Vec2, Vec3};
 use rustc_hash::FxHashMap;
+use tracing::error;
 use wgpu;
 
 use crate::instance::InstanceFlag;
@@ -127,6 +128,13 @@ impl PlayerAssetStore {
                 )
             })?;
 
+        let frame_w = (frame_detail.right - frame_detail.left) as f32;
+        let frame_h = (frame_detail.bottom - frame_detail.top) as f32;
+
+        if frame_w == 0.0 || frame_h == 0.0 {
+            return Ok(Instance::default());
+        }
+
         let allocation = loaded_sprite.allocations[anim_data.start_frame_index + frame_index]
             .as_ref()
             .ok_or_else(|| {
@@ -136,9 +144,6 @@ impl PlayerAssetStore {
                     frame_index
                 )
             })?;
-
-        let frame_w = (frame_detail.right - frame_detail.left) as f32;
-        let frame_h = (frame_detail.bottom - frame_detail.top) as f32;
 
         let mut frame_offset = Vec2::new(frame_detail.left as f32, frame_detail.top as f32);
         let mut piece_offset = sprite.slot.offset();
@@ -240,8 +245,18 @@ impl PlayerAssetStore {
             for frame in &anim.image.frames {
                 let w = frame.right - frame.left;
                 let h = frame.bottom - frame.top;
-                let alloc = atlas.allocate(queue, w as usize, h as usize, &frame.data);
-                allocations.push(alloc);
+                if w > 0 && h > 0 {
+                    let alloc = atlas.allocate(queue, w as usize, h as usize, &frame.data);
+                    if alloc.is_none() {
+                        error!(
+                            "Player atlas full - cannot allocate sprite {:?} ({}x{})",
+                            key, w, h
+                        );
+                    }
+                    allocations.push(alloc);
+                } else {
+                    allocations.push(None);
+                }
             }
             current_offset += anim.image.frames.len();
         }

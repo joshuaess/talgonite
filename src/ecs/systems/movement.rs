@@ -155,12 +155,22 @@ fn handle_walk_request(
 pub fn entity_motion_system(
     mut commands: Commands,
     mut entity_events: MessageReader<EntityEvent>,
-    mut moved_query: Query<(Entity, &mut Direction, &EntityId, &CreatureInstance)>,
+    mut moved_query: Query<
+        (
+            Entity,
+            &mut Direction,
+            &EntityId,
+            Option<&CreatureInstance>,
+            Option<&Player>,
+        ),
+        Without<LocalPlayer>,
+    >,
 ) {
     for event in entity_events.read() {
         match event {
             EntityEvent::Walk(evt) => {
-                for (entity, mut direction, entity_id, instance) in moved_query.iter_mut() {
+                let mut found = false;
+                for (entity, mut direction, entity_id, instance, player) in moved_query.iter_mut() {
                     if entity_id.id != evt.source_id {
                         continue;
                     }
@@ -170,7 +180,10 @@ pub fn entity_motion_system(
                         1 => (1, 0),
                         2 => (0, 1),
                         3 => (-1, 0),
-                        _ => continue,
+                        _ => {
+                            tracing::warn!("Invalid direction {} in walk event", evt.direction);
+                            continue;
+                        }
                     };
 
                     let new_dir = Direction::from(evt.direction);
@@ -187,26 +200,50 @@ pub fn entity_motion_system(
                         duration: 0.5,
                     });
 
-                    if let Some(walk) = instance.instance.get_animation(MpfAnimationType::Walk) {
-                        if let Some(standing) =
-                            instance.instance.get_animation(MpfAnimationType::Standing)
+                    if let Some(instance) = instance {
+                        if let Some(walk) = instance.instance.get_animation(MpfAnimationType::Walk)
                         {
-                            commands.entity(entity).insert(AnimationBundle::new(
-                                AnimationMode::OneShotThenLoop {
-                                    loop_anim: AnimationType::Creature(MpfAnimationType::Standing),
-                                    loop_frame_count: standing.frame_count as usize,
-                                    loop_frame_duration: 0.5,
-                                },
-                                AnimationType::Creature(MpfAnimationType::Walk),
-                                0.125,
-                                walk.frame_count as usize,
-                            ));
+                            if let Some(standing) =
+                                instance.instance.get_animation(MpfAnimationType::Standing)
+                            {
+                                commands.entity(entity).insert(AnimationBundle::new(
+                                    AnimationMode::OneShotThenLoop {
+                                        loop_anim: AnimationType::Creature(
+                                            MpfAnimationType::Standing,
+                                        ),
+                                        loop_frame_count: standing.frame_count as usize,
+                                        loop_frame_duration: 0.5,
+                                    },
+                                    AnimationType::Creature(MpfAnimationType::Walk),
+                                    0.125,
+                                    walk.frame_count as usize,
+                                ));
+                            }
                         }
+                    } else if let Some(_player) = player {
+                        commands.entity(entity).insert(AnimationBundle::new(
+                            AnimationMode::OneShot,
+                            AnimationType::Player(EpfAnimationType::Walk),
+                            0.10,
+                            5,
+                        ));
                     }
+
+                    found = true;
+                    break;
+                }
+
+                if !found {
+                    tracing::warn!(
+                        "EntityEvent::Walk: No entity found with source_id {} (target: {:?}, dir: {})",
+                        evt.source_id,
+                        evt.old_point,
+                        evt.direction
+                    );
                 }
             }
             EntityEvent::Turn(turn) => {
-                for (_, mut direction, entity_id, _) in moved_query.iter_mut() {
+                for (_, mut direction, entity_id, _, _) in moved_query.iter_mut() {
                     if entity_id.id == turn.source_id {
                         let new_dir = Direction::from(turn.direction);
                         if *direction != new_dir {
