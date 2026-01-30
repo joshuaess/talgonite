@@ -796,7 +796,6 @@ pub fn drain_slint_inbound(
 pub fn sync_world_labels_to_slint(
     win: Res<SlintWindow>,
     camera: Res<crate::Camera>,
-    window_surface: NonSend<crate::WindowSurface>,
     zoom_state: Res<ZoomState>,
     player_attrs: Res<crate::resources::PlayerAttributes>,
     current_session: Res<crate::CurrentSession>,
@@ -844,18 +843,10 @@ pub fn sync_world_labels_to_slint(
     game_state.set_camera_x(cam.position.x);
     game_state.set_camera_y(cam.position.y);
     game_state.set_camera_zoom(cam.zoom);
-    game_state.set_viewport_width(window_surface.width as f32);
-    game_state.set_viewport_height(window_surface.height as f32);
+    game_state.set_viewport_width(zoom_state.render_size.0 as f32);
+    game_state.set_viewport_height(zoom_state.render_size.1 as f32);
 
-    // Calculate display scale: how much the render texture is scaled up for display
-    // For pixel-perfect rendering: user_zoom (e.g., 2.0 means render at half size, display at 2x)
-    // For non-pixel-perfect: 1.0 (render at display size)
-    let display_scale = if zoom_state.is_pixel_perfect {
-        zoom_state.user_zoom
-    } else {
-        1.0
-    };
-    game_state.set_display_scale(display_scale);
+    game_state.set_display_scale(zoom_state.display_scale());
 
     // Collect all label types from all entities
     let mut slint_labels: Vec<crate::WorldLabel> = Vec::new();
@@ -908,7 +899,7 @@ pub fn sync_world_labels_to_slint(
                 text: slint::SharedString::default(),
                 world_x: world_pos.x,
                 world_y: world_pos.y,
-                y_offset: -80.0,
+                y_offset: -55.0,
                 color_r: 1.0,
                 color_g: 1.0,
                 color_b: 1.0,

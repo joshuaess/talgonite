@@ -93,7 +93,8 @@ impl CameraState {
     }
 
     pub fn set_position(&mut self, queue: &wgpu::Queue, x: f32, y: f32) {
-        self.camera.position = get_isometric_coordinate(x, y).round();
+        let pos = get_isometric_coordinate(x, y);
+        self.camera.position = (pos * self.camera.zoom).round() / self.camera.zoom;
         self.update(queue);
     }
 

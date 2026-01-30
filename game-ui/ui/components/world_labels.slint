@@ -11,10 +11,10 @@ component LabelItem inherits Rectangle {
     in property <float> disp_scale;   // display scale (display_size / render_size)
 
     pure function world-to-screen-x(world_x: float) -> length {
-        return ((world_x - cam_x) * zoom + vp_w / 2.0) * disp_scale * 1phx;
+        return (world_x - cam_x) * zoom * disp_scale * 1phx + (vp_w * disp_scale / 2.0) * 1phx;
     }
     pure function world-to-screen-y(world_y: float) -> length {
-        return ((world_y - cam_y) * zoom + vp_h / 2.0) * disp_scale * 1phx;
+        return (world_y - cam_y) * zoom * disp_scale * 1phx + (vp_h * disp_scale / 2.0) * 1phx;
     }
     property <length> screen_x: world-to-screen-x(label.world_x);
     property <length> screen_y: world-to-screen-y(label.world_y + label.y_offset);
@@ -23,7 +23,7 @@ component LabelItem inherits Rectangle {
     property <length> label_padding: label.is_speech ? 8px : 4px;
     property <length> bottom_offset: 8px * total_scale;
     x: screen_x - self.width / 2;
-    y: screen_y + bottom_offset;
+    y: screen_y - bottom_offset - self.height;
     width: txt.width + label_padding * 2;
     height: txt.height + label_padding * 2;
 
@@ -46,7 +46,6 @@ component LabelItem inherits Rectangle {
             background: label.health_percent > 50 ? #2ecc71 : (label.health_percent > 25 ? #f1c40f : #e74c3c);
         }
     }
-
     txt := Text {
         x: label_padding;
         y: label_padding;
@@ -70,7 +69,6 @@ component LabelItem inherits Rectangle {
 
     states [
         speech when label.is_speech: {
-            y: screen_y + bottom_offset - self.height;
             background: #00000075;
             border-radius: 10px;
             border-width: 1px;

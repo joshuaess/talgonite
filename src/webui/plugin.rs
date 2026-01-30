@@ -99,22 +99,8 @@ fn emit_snapshot_on_state_change(
 ) {
     let current = *app_state.get();
     if prev.map(|p| p != current).unwrap_or(true) {
-        let logins_public: Vec<SavedCredentialPublic> =
-            settings.saved_credentials.iter().map(to_public).collect();
-
-        writer.write(UiOutbound(CoreToUi::Snapshot {
-            servers: settings.servers.clone(),
-            current_server_id: settings.gameplay.current_server_id,
-            logins: logins_public,
-            login_error: None,
-        }));
-        writer.write(UiOutbound(CoreToUi::SettingsSync {
-            xray_size: settings.graphics.xray_size as u8,
-            sfx_volume: settings.audio.sfx_volume,
-            music_volume: settings.audio.music_volume,
-            scale: settings.graphics.scale,
-            key_bindings: (&settings.key_bindings).into(),
-        }));
+        writer.write(UiOutbound(settings.to_snapshot_message(None)));
+        writer.write(UiOutbound(settings.to_sync_message()));
         *prev = Some(current);
     }
 }
@@ -314,21 +300,8 @@ fn handle_ui_inbound_ingame(
                 }
             }
             UiToCore::RequestSnapshot => {
-                let logins_public: Vec<SavedCredentialPublic> =
-                    settings.saved_credentials.iter().map(to_public).collect();
-                outbound.write(UiOutbound(CoreToUi::Snapshot {
-                    servers: settings.servers.clone(),
-                    current_server_id: settings.gameplay.current_server_id,
-                    logins: logins_public,
-                    login_error: None,
-                }));
-                outbound.write(UiOutbound(CoreToUi::SettingsSync {
-                    xray_size: settings.graphics.xray_size as u8,
-                    sfx_volume: settings.audio.sfx_volume,
-                    music_volume: settings.audio.music_volume,
-                    scale: settings.graphics.scale,
-                    key_bindings: (&settings.key_bindings).into(),
-                }));
+                outbound.write(UiOutbound(settings.to_snapshot_message(None)));
+                outbound.write(UiOutbound(settings.to_sync_message()));
             }
             UiToCore::SettingsChange { xray_size } => {
                 settings.graphics.xray_size = crate::settings_types::XRaySize::from_u8(*xray_size);
@@ -797,21 +770,8 @@ fn handle_ui_inbound_login(
             }
             UiToCore::ReturnToMainMenu => {}
             UiToCore::RequestSnapshot => {
-                let logins_public: Vec<SavedCredentialPublic> =
-                    settings.saved_credentials.iter().map(to_public).collect();
-                outbound.write(UiOutbound(CoreToUi::Snapshot {
-                    servers: settings.servers.clone(),
-                    current_server_id: settings.gameplay.current_server_id,
-                    logins: logins_public,
-                    login_error: None,
-                }));
-                outbound.write(UiOutbound(CoreToUi::SettingsSync {
-                    xray_size: settings.graphics.xray_size as u8,
-                    sfx_volume: settings.audio.sfx_volume,
-                    music_volume: settings.audio.music_volume,
-                    scale: settings.graphics.scale,
-                    key_bindings: (&settings.key_bindings).into(),
-                }));
+                outbound.write(UiOutbound(settings.to_snapshot_message(None)));
+                outbound.write(UiOutbound(settings.to_sync_message()));
             }
             UiToCore::LoginSubmit {
                 server_id,
@@ -863,14 +823,7 @@ fn handle_ui_inbound_login(
                         server_id
                     );
                 }
-                let logins_public: Vec<SavedCredentialPublic> =
-                    settings.saved_credentials.iter().map(to_public).collect();
-                outbound.write(UiOutbound(CoreToUi::Snapshot {
-                    servers: settings.servers.clone(),
-                    current_server_id: settings.gameplay.current_server_id,
-                    logins: logins_public,
-                    login_error: None,
-                }));
+                outbound.write(UiOutbound(settings.to_snapshot_message(None)));
             }
             UiToCore::LoginUseSaved { id } => {
                 println!("[webui] LoginUseSaved: id={}", id);
@@ -932,16 +885,9 @@ fn handle_ui_inbound_login(
                                 "[webui] LoginUseSaved: server {} not found in settings",
                                 server_id
                             );
-                            let logins_public: Vec<SavedCredentialPublic> =
-                                settings.saved_credentials.iter().map(to_public).collect();
-                            outbound.write(UiOutbound(CoreToUi::Snapshot {
-                                servers: settings.servers.clone(),
-                                current_server_id: settings.gameplay.current_server_id,
-                                logins: logins_public,
-                                login_error: Some(LoginError::Network(
-                                    "Server missing".to_string(),
-                                )),
-                            }));
+                            outbound.write(UiOutbound(settings.to_snapshot_message(Some(
+                                LoginError::Network("Server missing".to_string()),
+                            ))));
                             emitted_snapshot = true;
                         }
                     }
@@ -950,16 +896,9 @@ fn handle_ui_inbound_login(
                             "[webui] LoginUseSaved: keyring missing password for id={} ({}). Prompting user to re-enter.",
                             cred_id, err
                         );
-                        let logins_public: Vec<SavedCredentialPublic> =
-                            settings.saved_credentials.iter().map(to_public).collect();
-                        outbound.write(UiOutbound(CoreToUi::Snapshot {
-                            servers: settings.servers.clone(),
-                            current_server_id: settings.gameplay.current_server_id,
-                            logins: logins_public,
-                            login_error: Some(LoginError::Network(
-                                "Missing saved password".to_string(),
-                            )),
-                        }));
+                        outbound.write(UiOutbound(settings.to_snapshot_message(Some(
+                            LoginError::Network("Missing saved password".to_string()),
+                        ))));
                         emitted_snapshot = true;
                     }
                 }
@@ -977,26 +916,11 @@ fn handle_ui_inbound_login(
             UiToCore::LoginRemoveSaved { id } => {
                 let _ = keyring::delete_password(id);
                 settings.remove_credential(id);
-
-                let logins_public: Vec<SavedCredentialPublic> =
-                    settings.saved_credentials.iter().map(to_public).collect();
-                outbound.write(UiOutbound(CoreToUi::Snapshot {
-                    servers: settings.servers.clone(),
-                    current_server_id: settings.gameplay.current_server_id,
-                    logins: logins_public,
-                    login_error: None,
-                }));
+                outbound.write(UiOutbound(settings.to_snapshot_message(None)));
             }
             UiToCore::ServersChangeCurrent { id } => {
                 settings.gameplay.current_server_id = Some(*id);
-                let logins_public: Vec<SavedCredentialPublic> =
-                    settings.saved_credentials.iter().map(to_public).collect();
-                outbound.write(UiOutbound(CoreToUi::Snapshot {
-                    servers: settings.servers.clone(),
-                    current_server_id: settings.gameplay.current_server_id,
-                    logins: logins_public,
-                    login_error: None,
-                }));
+                outbound.write(UiOutbound(settings.to_snapshot_message(None)));
             }
             UiToCore::ServersAdd { server } => {
                 let new_id = next_id(settings.servers.iter().map(|s| s.id));
@@ -1008,42 +932,21 @@ fn handle_ui_inbound_login(
                 if settings.gameplay.current_server_id.is_none() {
                     settings.gameplay.current_server_id = Some(new_id);
                 }
-                let logins_public: Vec<SavedCredentialPublic> =
-                    settings.saved_credentials.iter().map(to_public).collect();
-                outbound.write(UiOutbound(CoreToUi::Snapshot {
-                    servers: settings.servers.clone(),
-                    current_server_id: settings.gameplay.current_server_id,
-                    logins: logins_public,
-                    login_error: None,
-                }));
+                outbound.write(UiOutbound(settings.to_snapshot_message(None)));
             }
             UiToCore::ServersEdit { server } => {
                 if let Some(s) = settings.servers.iter_mut().find(|s| s.id == server.id) {
                     s.name = server.name.clone();
                     s.address = server.address.clone();
                 }
-                let logins_public: Vec<SavedCredentialPublic> =
-                    settings.saved_credentials.iter().map(to_public).collect();
-                outbound.write(UiOutbound(CoreToUi::Snapshot {
-                    servers: settings.servers.clone(),
-                    current_server_id: settings.gameplay.current_server_id,
-                    logins: logins_public,
-                    login_error: None,
-                }));
+                outbound.write(UiOutbound(settings.to_snapshot_message(None)));
             }
             UiToCore::ServersRemove { id } => {
                 settings.servers.retain(|s| s.id != *id);
                 if settings.gameplay.current_server_id == Some(*id) {
                     settings.gameplay.current_server_id = settings.servers.first().map(|s| s.id);
                 }
-                let logins_public: Vec<SavedCredentialPublic> =
-                    settings.saved_credentials.iter().map(to_public).collect();
-                outbound.write(UiOutbound(CoreToUi::Snapshot {
-                    servers: settings.servers.clone(),
-                    current_server_id: settings.gameplay.current_server_id,
-                    logins: logins_public,
-                    login_error: None,
-                }));
+                outbound.write(UiOutbound(settings.to_snapshot_message(None)));
             }
             UiToCore::SettingsChange { xray_size } => {
                 settings.graphics.xray_size = crate::settings_types::XRaySize::from_u8(*xray_size);
@@ -2096,9 +1999,8 @@ fn handle_login_results(
                     Ok((packet_id, packet_data)) => {
                         match packets::server::Codes::try_from(packet_id) {
                             Ok(code) => {
-                                let _ = tx_for_task.send(
-                                    crate::events::NetworkEvent::Packet(code, packet_data),
-                                );
+                                let _ = tx_for_task
+                                    .send(crate::events::NetworkEvent::Packet(code, packet_data));
                             }
                             Err(_) => (),
                         }
@@ -2196,12 +2098,6 @@ fn handle_login_results(
 
 fn sync_settings_to_ui(settings: Res<SettingsFile>, mut outbound: MessageWriter<UiOutbound>) {
     if settings.is_changed() {
-        outbound.write(UiOutbound(CoreToUi::SettingsSync {
-            xray_size: settings.graphics.xray_size as u8,
-            sfx_volume: settings.audio.sfx_volume,
-            music_volume: settings.audio.music_volume,
-            scale: settings.graphics.scale,
-            key_bindings: (&settings.key_bindings).into(),
-        }));
+        outbound.write(UiOutbound(settings.to_sync_message()));
     }
 }

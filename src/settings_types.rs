@@ -1,4 +1,5 @@
 use bevy::prelude::Resource;
+use game_ui::{CoreToUi, LoginError};
 
 pub use game_types::{
     CharacterPreview, CustomHotBarSlot, CustomHotBars, KeyBindings, SavedCredential,
@@ -16,6 +17,8 @@ pub struct AudioSettings {
 pub struct GraphicsSettings {
     pub xray_size: XRaySize,
     pub scale: f32,
+    #[serde(default)]
+    pub high_quality_scaling: bool,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
@@ -57,6 +60,7 @@ impl Default for Settings {
             graphics: GraphicsSettings {
                 xray_size: XRaySize::Medium,
                 scale: 1.0,
+                high_quality_scaling: false,
             },
             gameplay: GameplaySettings {
                 current_server_id: Some(1),
@@ -85,5 +89,34 @@ impl Settings {
     pub fn set_hotbars(&mut self, server_id: u32, username: &str, hotbars: CustomHotBars) {
         let key = format!("{}:{}", server_id, username);
         self.hotbars.insert(key, hotbars);
+    }
+
+    pub fn to_sync_message(&self) -> CoreToUi {
+        CoreToUi::SettingsSync {
+            xray_size: self.graphics.xray_size as u8,
+            sfx_volume: self.audio.sfx_volume,
+            music_volume: self.audio.music_volume,
+            scale: self.graphics.scale,
+            key_bindings: (&self.key_bindings).into(),
+        }
+    }
+
+    pub fn to_snapshot_message(&self, login_error: Option<LoginError>) -> CoreToUi {
+        CoreToUi::Snapshot {
+            servers: self.servers.clone(),
+            current_server_id: self.gameplay.current_server_id,
+            logins: self
+                .saved_credentials
+                .iter()
+                .map(|c| SavedCredentialPublic {
+                    id: c.id.clone(),
+                    server_id: c.server_id,
+                    username: c.username.clone(),
+                    last_used: c.last_used,
+                    preview: c.preview.clone(),
+                })
+                .collect(),
+            login_error,
+        }
     }
 }
