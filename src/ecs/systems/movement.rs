@@ -50,7 +50,7 @@ pub fn player_movement_system(
                 direction,
                 source: _,
             } => {
-                if handle_walk_request(
+                if let Some(start_pos) = handle_walk_request(
                     entity,
                     *direction,
                     map,
@@ -62,7 +62,10 @@ pub fn player_movement_system(
                     collision_table.as_deref(),
                     map_collision.as_deref(),
                 ) {
-                    unconfirmed.0.push_back(*direction);
+                    unconfirmed.pending.push_back(UnconfirmedStep {
+                        direction: *direction,
+                        expected_from: start_pos,
+                    });
 
                     if let Some(outbox) = &outbox {
                         outbox.send(&client::ClientWalk {
@@ -97,47 +100,43 @@ fn handle_walk_request(
     commands: &mut Commands,
     collision_table: Option<&WallCollisionTable>,
     map_collision: Option<&MapCollisionData>,
-) -> bool {
-    let (dx, dy) = direction.delta();
+) -> Option<Vec2> {
+    let delta = direction.vec2_delta();
 
-    let new_dir = Direction::from(direction);
-    if *facing != new_dir {
-        *facing = new_dir;
+    if *facing != direction {
+        *facing = direction;
     }
 
-    let (start_x, start_y) = if let Some(tween) = tween {
-        (tween.end_x, tween.end_y)
-    } else {
-        (position.x, position.y)
-    };
+    let start_pos = tween.map(|t| t.end).unwrap_or_else(|| position.to_vec2());
 
-    let target_x = (start_x as i16 + dx).max(0).min(map.width as i16 - 1) as f32;
-    let target_y = (start_y as i16 + dy).max(0).min(map.height as i16 - 1) as f32;
+    let target_pos = (start_pos + delta).clamp(
+        Vec2::ZERO,
+        Vec2::new(map.width as f32 - 1.0, map.height as f32 - 1.0),
+    );
 
     // Check wall collision at target tile
-    let target_x_int = target_x as u8;
-    let target_y_int = target_y as u8;
+    let target_tile = target_pos.as_uvec2();
 
     if !crate::ecs::collision::can_walk_to(
-        target_x_int,
-        target_y_int,
+        target_tile.x as u8,
+        target_tile.y as u8,
         collision_table,
         map_collision,
     ) {
-        return false;
+        return None;
     }
 
     // Check entity collision (other players and NPCs)
     let is_tile_occupied = entity_positions
         .iter()
-        .any(|pos| (pos.x - target_x).abs() < 0.5 && (pos.y - target_y).abs() < 0.5);
+        .any(|pos| pos.to_vec2().distance_squared(target_pos) < 0.25);
     if is_tile_occupied {
-        return false;
+        return None;
     }
 
     // Skip creating a zero-length tween if clamped (edge of map / no movement)
-    if (target_x - start_x).abs() < f32::EPSILON && (target_y - start_y).abs() < f32::EPSILON {
-        return false;
+    if start_pos.distance_squared(target_pos) < f32::EPSILON {
+        return None;
     }
 
     commands.entity(entity).insert((
@@ -148,16 +147,14 @@ fn handle_walk_request(
             5,
         ),
         MovementTween {
-            start_x,
-            start_y,
-            end_x: target_x,
-            end_y: target_y,
+            start: start_pos,
+            end: target_pos,
             elapsed: 0.0,
             duration: 0.5,
         },
     ));
 
-    true
+    Some(start_pos)
 }
 
 /// Handles creature movement events from the server.
@@ -184,27 +181,19 @@ pub fn entity_motion_system(
                         continue;
                     }
 
-                    let (dx, dy) = match evt.direction {
-                        0 => (0, -1),
-                        1 => (1, 0),
-                        2 => (0, 1),
-                        3 => (-1, 0),
-                        _ => {
-                            tracing::warn!("Invalid direction {} in walk event", evt.direction);
-                            continue;
-                        }
-                    };
+                    let delta = Direction::from(evt.direction).vec2_delta();
 
                     let new_dir = Direction::from(evt.direction);
                     if *direction != new_dir {
                         *direction = new_dir;
                     }
 
+                    let start_pos = Vec2::new(evt.old_point.0 as f32, evt.old_point.1 as f32);
+                    let end_pos = start_pos + delta;
+
                     commands.entity(entity).insert(MovementTween {
-                        start_x: evt.old_point.0 as f32,
-                        start_y: evt.old_point.1 as f32,
-                        end_x: (evt.old_point.0 as i32 + dx) as f32,
-                        end_y: (evt.old_point.1 as i32 + dy) as f32,
+                        start: start_pos,
+                        end: end_pos,
                         elapsed: 0.0,
                         duration: 0.5,
                     });
@@ -410,18 +399,12 @@ pub fn movement_tween_system(
 ) {
     for (entity, mut pos, mut tween) in query.iter_mut() {
         tween.elapsed += time.delta().as_secs_f32();
-        let raw_t = (tween.elapsed / tween.duration).clamp(0.0, 1.0);
+        let t = (tween.elapsed / tween.duration).clamp(0.0, 1.0);
 
-        // Linear interpolation for constant walking speed
-        let t = raw_t;
-
-        pos.x = tween.start_x + (tween.end_x - tween.start_x) * t;
-        pos.y = tween.start_y + (tween.end_y - tween.start_y) * t;
+        *pos = tween.start.lerp(tween.end, t).into();
 
         if tween.elapsed >= tween.duration {
-            // Land exactly on the intended tile (eliminate FP drift)
-            pos.x = tween.end_x;
-            pos.y = tween.end_y;
+            *pos = tween.end.into();
             commands.entity(entity).remove::<MovementTween>();
         }
     }
@@ -451,7 +434,8 @@ pub fn player_reconciliation_system(
     // Purge on map change
     for event in map_events.read() {
         if let crate::events::MapEvent::Clear = event {
-            unconfirmed.0.clear();
+            unconfirmed.pending.clear();
+            unconfirmed.recent_deltas.clear();
         }
     }
 
@@ -460,41 +444,83 @@ pub fn player_reconciliation_system(
             EntityEvent::PlayerLocation(location) => {
                 position.x = location.x as f32;
                 position.y = location.y as f32;
-                unconfirmed.0.clear();
+                unconfirmed.pending.clear();
+                unconfirmed.recent_deltas.clear();
                 commands.entity(entity).remove::<MovementTween>();
             }
             EntityEvent::PlayerWalkResponse(response) => {
-                unconfirmed.0.pop_front();
+                let confirmed_step = unconfirmed.pending.pop_front();
+
+                if let ClientWalkResponseArgs::Accepted(_) = response.args {
+                    if let Some(step) = confirmed_step {
+                        let response_from =
+                            Vec2::new(response.from.0 as f32, response.from.1 as f32);
+                        let drift = response_from - step.expected_from;
+
+                        if drift.length_squared() > 1e-6 {
+                            unconfirmed.recent_deltas.push_back(drift);
+                            if unconfirmed.recent_deltas.len() > 3 {
+                                unconfirmed.recent_deltas.pop_front();
+                            }
+
+                            if unconfirmed.recent_deltas.len() >= 2 {
+                                let first = unconfirmed.recent_deltas[0];
+                                if unconfirmed
+                                    .recent_deltas
+                                    .iter()
+                                    .all(|&d| d.distance_squared(first) < 1e-6)
+                                {
+                                    *position += first;
+
+                                    if let Some(ref mut tween) = active_tween {
+                                        tween.start += first;
+                                        tween.end += first;
+                                    }
+
+                                    for pending in &mut unconfirmed.pending {
+                                        pending.expected_from += first;
+                                    }
+
+                                    unconfirmed.recent_deltas.clear();
+                                }
+                            }
+                        } else {
+                            unconfirmed.recent_deltas.clear();
+                        }
+                    }
+                }
 
                 if let ClientWalkResponseArgs::Rejected = response.args {
+                    unconfirmed.recent_deltas.clear();
+
                     // Snap to server's "from" position (state before the rejected step)
-                    position.x = response.from.0 as f32;
-                    position.y = response.from.1 as f32;
+                    let mut current_pos = Vec2::new(response.from.0 as f32, response.from.1 as f32);
+                    *position = current_pos.into();
 
                     // Replay unconfirmed steps
-                    let count = unconfirmed.0.len();
-                    for (idx, &dir) in unconfirmed.0.iter().enumerate() {
-                        let (dx, dy) = dir.delta();
+                    let count = unconfirmed.pending.len();
+                    for (idx, step) in unconfirmed.pending.iter_mut().enumerate() {
+                        let delta = step.direction.vec2_delta();
+                        step.expected_from = current_pos;
 
                         if idx < count - 1 {
                             // Teleport for intermediate steps
-                            position.x += dx as f32;
-                            position.y += dy as f32;
-                        } else if let Some(ref mut tween) = active_tween {
+                            current_pos += delta;
+                        } else if let Some(ref mut active_tween) = active_tween {
                             // Final step: update tween
-                            tween.start_x = position.x;
-                            tween.start_y = position.y;
-                            tween.end_x = position.x + dx as f32;
-                            tween.end_y = position.y + dy as f32;
-                            // Position will be updated by movement_tween_system this frame
+                            active_tween.start = current_pos;
+                            active_tween.end = current_pos + delta;
                         } else {
                             // Final step: snap
-                            position.x += dx as f32;
-                            position.y += dy as f32;
+                            current_pos += delta;
                         }
                     }
 
-                    if unconfirmed.0.is_empty() {
+                    if active_tween.is_none() {
+                        *position = current_pos.into();
+                    }
+
+                    if unconfirmed.pending.is_empty() {
                         commands.entity(entity).remove::<MovementTween>();
                     }
                 }

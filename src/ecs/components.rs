@@ -12,20 +12,47 @@ use rendering::scene::{
 };
 use std::collections::VecDeque;
 
-#[derive(Component, PartialEq)]
+#[derive(Component, PartialEq, Clone, Copy, Debug, Default)]
 pub struct Position {
     pub x: f32,
     pub y: f32,
+}
+
+impl Position {
+    pub fn new(x: f32, y: f32) -> Self {
+        Self { x, y }
+    }
+
+    pub fn to_vec2(&self) -> Vec2 {
+        Vec2::new(self.x, self.y)
+    }
+}
+
+impl From<Vec2> for Position {
+    fn from(v: Vec2) -> Self {
+        Self::new(v.x, v.y)
+    }
+}
+
+impl From<Position> for Vec2 {
+    fn from(pos: Position) -> Self {
+        Vec2::new(pos.x, pos.y)
+    }
+}
+
+impl std::ops::AddAssign<Vec2> for Position {
+    fn add_assign(&mut self, rhs: Vec2) {
+        self.x += rhs.x;
+        self.y += rhs.y;
+    }
 }
 
 // Tween (interpolated) movement between two tile positions.
 // Added to entities (creatures & players) on walk; lasts 500ms.
 #[derive(Component, Debug)]
 pub struct MovementTween {
-    pub start_x: f32,
-    pub start_y: f32,
-    pub end_x: f32,
-    pub end_y: f32,
+    pub start: Vec2,
+    pub end: Vec2,
     pub elapsed: f32,
     pub duration: f32, // seconds
 }
@@ -93,10 +120,24 @@ impl Direction {
             Direction::Left => (-1, 0),
         }
     }
+
+    pub fn vec2_delta(&self) -> Vec2 {
+        let (dx, dy) = self.delta();
+        Vec2::new(dx as f32, dy as f32)
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct UnconfirmedStep {
+    pub direction: Direction,
+    pub expected_from: Vec2,
 }
 
 #[derive(Component, Default)]
-pub struct UnconfirmedWalks(pub VecDeque<Direction>);
+pub struct UnconfirmedWalks {
+    pub pending: VecDeque<UnconfirmedStep>,
+    pub recent_deltas: VecDeque<Vec2>,
+}
 
 #[derive(Component)]
 pub struct LocalPlayer;
