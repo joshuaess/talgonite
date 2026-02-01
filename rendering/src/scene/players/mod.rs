@@ -216,12 +216,16 @@ impl PlayerAssetStore {
         queue: &wgpu::Queue,
         archive: &Archive,
     ) -> anyhow::Result<LoadedSprite> {
-        let path = format!(
-            "khan/{}{}/{:#03}.epfanim",
-            key.gender.char(),
-            prefix,
-            key.sprite_id % 1000
-        );
+        let path = if key.slot == PlayerPieceType::Emote {
+            format!("khan/em/{:03}.epfanim", key.sprite_id % 1000)
+        } else {
+            format!(
+                "khan/{}{}/{:03}.epfanim",
+                key.gender.char(),
+                prefix,
+                key.sprite_id % 1000
+            )
+        };
         let epf_bytes = archive.get_file(&path)?;
         let (epf_image, _) = bincode::decode_from_slice::<Vec<EpfAnimation>, Configuration>(
             &epf_bytes,
@@ -341,7 +345,7 @@ impl PlayerBatch {
         // Use entity_id as tiebreaker for players on the same tile
         let stack_order = (entity_id % PLAYERS_PER_TILE as u32) as u8;
 
-        let instance = PlayerAssetStore::get_instance_for_frame(
+        let instance = match PlayerAssetStore::get_instance_for_frame(
             &store.palettes,
             loaded_sprite,
             &sprite,
@@ -354,7 +358,13 @@ impl PlayerBatch {
             flags,
             tint,
             stack_order,
-        )?;
+        ) {
+            Ok(inst) => inst,
+            Err(_) => {
+                // If Idle is missing (e.g. for purely emote pieces), just use an empty instance
+                Instance::default()
+            }
+        };
 
         let instance_index = self
             .instances
@@ -467,6 +477,16 @@ impl PlayerBatch {
         .unwrap_or_default();
 
         self.instances.update(queue, handle.index.0, instance);
+        Ok(())
+    }
+
+    pub fn hide_player_sprite(
+        &self,
+        queue: &wgpu::Queue,
+        handle: &PlayerSpriteHandle,
+    ) -> anyhow::Result<()> {
+        self.instances
+            .update(queue, handle.index.0, Instance::default());
         Ok(())
     }
 
