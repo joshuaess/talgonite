@@ -369,11 +369,6 @@ pub fn player_animation_start_system(
                 }
             }
 
-            tracing::info!(
-                "Starting animation {:?} for player ID {}",
-                anim,
-                entity_id.id
-            );
             commands.entity(entity).insert(AnimationBundle::new(
                 AnimationMode::OneShot,
                 AnimationType::Player(anim_type),
@@ -404,11 +399,6 @@ pub fn player_animation_start_system(
             };
 
             let idle_anim = instance.instance.get_animation(MpfAnimationType::Standing);
-            tracing::info!(
-                "Starting animation {:?} for NPC ID {}",
-                anim_type,
-                entity_id.id
-            );
             commands.entity(entity).insert(AnimationBundle::new(
                 match idle_anim {
                     Some(idle) => AnimationMode::OneShotThenLoop {
