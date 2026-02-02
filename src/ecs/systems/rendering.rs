@@ -72,7 +72,7 @@ pub fn sync_lobby_portraits(
                     preview.body.max(1),
                     preview.shield_color as u8,
                 ),
-                (PlayerPieceType::Face, 1, 0), // Standard face
+                (PlayerPieceType::Face, 1, preview.shield_color as u8), // Standard face with body color
                 (
                     PlayerPieceType::HelmetBg,
                     preview.helmet,

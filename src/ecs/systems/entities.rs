@@ -423,14 +423,14 @@ fn spawn_player_sprites(
             parent.spawn(PlayerSprite {
                 id: face_sprite as u16,
                 slot: PlayerPieceType::Face,
-                color: head_color,
+                color: body_color,
             });
         }
 
         parent.spawn(PlayerSprite {
             id: 1,
             slot: PlayerPieceType::Emote,
-            color: 0,
+            color: body_color,
         });
 
         if pants_color > 0 {
