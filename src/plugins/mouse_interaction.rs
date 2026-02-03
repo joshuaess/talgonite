@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use glam::Vec2;
 use rendering::scene::utils::screen_to_iso_tile;
 
+use crate::app_state::AppState;
 use crate::ecs::components::{EntityId, Hitbox, ItemSprite, LocalPlayer, NPC, Player, Position};
 use crate::ecs::interaction::HoveredEntity;
 use crate::ecs::spell_casting::SpellCastingState;
@@ -33,7 +34,8 @@ impl Plugin for MouseInteractionPlugin {
                 )
                     .chain()
                     .in_set(MouseInteractionSet)
-                    .after(crate::plugins::input::InputPumpSet),
+                    .after(crate::plugins::input::InputPumpSet)
+                    .run_if(in_state(AppState::InGame)),
             );
     }
 }
