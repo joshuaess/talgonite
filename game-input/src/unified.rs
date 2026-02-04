@@ -115,6 +115,12 @@ impl UnifiedInputBindings {
                 InputSource::Gamepad(GamepadInputType::Button(GamepadButton::South)),
             ],
         );
+        bindings.insert(
+            GameAction::ItemPickup,
+            vec![
+                InputSource::Keyboard(KeyBinding::new(KeyCode::KeyB)),
+            ],
+        );
 
         Self { bindings }
     }
@@ -146,6 +152,7 @@ impl UnifiedInputBindings {
         bind!(settings, Settings);
         bind!(refresh, Refresh);
         bind!(basic_attack, BasicAttack);
+        bind!(item_pickup, ItemPickup);
         bind!(hotbar_slot_1, HotbarSlot1);
         bind!(hotbar_slot_2, HotbarSlot2);
         bind!(hotbar_slot_3, HotbarSlot3);

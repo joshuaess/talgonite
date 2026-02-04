@@ -1,6 +1,6 @@
 use crate::{
     app_state::AppState,
-    ecs::components::{Direction, LocalPlayer, MovementTween},
+    ecs::components::{Direction, LocalPlayer, MovementTween, Position},
     ecs::spell_casting::SpellCastingState,
     ecs::systems::GameSet,
     events::{InputSource, PlayerAction},
@@ -13,7 +13,7 @@ use crate::{
 };
 use bevy::prelude::*;
 use game_types::SlotPanelType;
-use packets::client::{RefreshRequest, Spacebar};
+use packets::client::{RefreshRequest, Spacebar, Pickup};
 
 #[derive(SystemSet, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct InputPumpSet;
@@ -117,7 +117,7 @@ pub fn input_handling_system(
     window: Option<Res<crate::slint_support::state_bridge::SlintWindow>>,
     mut player_actions: MessageWriter<PlayerAction>,
     mut player_query: Query<
-        (&mut LocalPlayer, &mut Direction, Option<&MovementTween>),
+        (&mut LocalPlayer, &mut Direction, Option<&MovementTween>, &Position),
         With<LocalPlayer>,
     >,
     outbox: Res<PacketOutbox>,
@@ -148,6 +148,49 @@ pub fn input_handling_system(
         tracing::info!("Basic attack triggered");
         spell_casting.active_cast = None;
         outbox.send(&Spacebar);
+    }
+
+    // Item Pickup - try the tile underneath the player first, then the tile in front
+    if bindings.is_just_pressed(
+        GameAction::ItemPickup,
+        &keyboard_input,
+        Some(&gamepad_query),
+        Some(&gamepad_config),
+    ) {
+        // Get player position and direction for item pickup
+        for (_, direction, _, player_pos) in &player_query {
+            // Tile under the player
+            let under_x = player_pos.x as u16;
+            let under_y = player_pos.y as u16;
+
+            tracing::info!("Item pickup (under) triggered at ({}, {})", under_x, under_y);
+            outbox.send(&Pickup {
+                destination_slot: 0,
+                source_point: (under_x, under_y),
+            });
+
+            // Calculate the tile in front of the player based on their direction
+            let (dx, dy) = match direction {
+                Direction::Up => (0.0, -1.0),
+                Direction::Down => (0.0, 1.0),
+                Direction::Left => (-1.0, 0.0),
+                Direction::Right => (1.0, 0.0),
+            };
+
+            let front_x = (player_pos.x + dx) as u16;
+            let front_y = (player_pos.y + dy) as u16;
+
+            // If front tile differs from under tile, attempt pickup there as well
+            if front_x != under_x || front_y != under_y {
+                tracing::info!("Item pickup (front) triggered at ({}, {})", front_x, front_y);
+                outbox.send(&Pickup {
+                    destination_slot: 0,
+                    source_point: (front_x, front_y),
+                });
+            }
+
+            break; // only handle the local player once
+        }
     }
 
     // Toggle Panels
@@ -303,7 +346,7 @@ pub fn input_handling_system(
         GameAction::MoveRight,
     ];
 
-    if let Ok((_, mut current_direction, active_tween)) = player_query.single_mut() {
+    if let Ok((_, mut current_direction, active_tween, _)) = player_query.single_mut() {
         input_timer.walk_cd.tick(time.delta());
         if let Some(grace) = input_timer.turn_grace.as_mut() {
             grace.tick(time.delta());

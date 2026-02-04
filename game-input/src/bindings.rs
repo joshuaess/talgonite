@@ -131,6 +131,7 @@ impl InputBindings {
             GameAction::BasicAttack,
             vec![KeyBinding::new(KeyCode::Space)],
         );
+        bindings.insert(GameAction::ItemPickup, vec![KeyBinding::new(KeyCode::KeyB)]);
         Self { bindings }
     }
 
@@ -161,6 +162,7 @@ impl InputBindings {
         bind!(settings, Settings);
         bind!(refresh, Refresh);
         bind!(basic_attack, BasicAttack);
+        bind!(item_pickup, ItemPickup);
 
         bind!(hotbar_slot_1, HotbarSlot1);
         bind!(hotbar_slot_2, HotbarSlot2);
