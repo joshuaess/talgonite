@@ -11,6 +11,7 @@ mod interruption;
 mod map;
 mod movement;
 mod pathfinding;
+mod pickup_item_below;
 mod rendering;
 
 pub use camera::*;
@@ -21,6 +22,7 @@ pub use interruption::*;
 pub use map::*;
 pub use movement::*;
 pub use pathfinding::*;
+pub use pickup_item_below::*;
 pub use rendering::*;
 
 use bevy::prelude::*;

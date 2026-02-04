@@ -89,6 +89,8 @@ pub enum PlayerAction {
         direction: Direction,
         source: InputSource,
     },
+    /// Request to pick up an item under the player or in front of them.
+    PickupItemBelow,
 }
 
 impl PlayerAction {
@@ -96,6 +98,7 @@ impl PlayerAction {
         match self {
             PlayerAction::Walk { source, .. } => *source == InputSource::Manual,
             PlayerAction::Turn { source, .. } => *source == InputSource::Manual,
+            PlayerAction::PickupItemBelow => true,
         }
     }
 }

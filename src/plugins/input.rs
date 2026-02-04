@@ -150,6 +150,17 @@ pub fn input_handling_system(
         outbox.send(&Spacebar);
     }
 
+    // Item pickup (below / in front)
+    if bindings.is_just_pressed(
+        GameAction::ItemPickupBelow,
+        &keyboard_input,
+        Some(&gamepad_query),
+        Some(&gamepad_config),
+    ) {
+        tracing::info!("Item pickup (below) triggered");
+        player_actions.write(crate::events::PlayerAction::PickupItemBelow);
+    }
+
     // Toggle Panels
     if let Some(strong) = window.as_ref().and_then(|w| w.0.upgrade()) {
         let game_state = slint::ComponentHandle::global::<crate::GameState>(&strong);

@@ -60,6 +60,14 @@ impl Plugin for GamePlugin {
                     .run_if(in_state(crate::app_state::AppState::InGame))
                     .in_set(GameSet::EventProcessing),
             )
+            // === Pickup system ===
+            .add_systems(
+                Update,
+                systems::handle_pickup_item_below
+                    .run_if(in_state(crate::app_state::AppState::InGame))
+                    .after(crate::plugins::input::InputPumpSet)
+                    .in_set(GameSet::EventProcessing),
+            )
             // === Spawning Systems ===
             .add_systems(
                 Update,

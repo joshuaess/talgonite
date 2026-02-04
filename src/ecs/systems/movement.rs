@@ -85,6 +85,9 @@ pub fn player_movement_system(
                     });
                 }
             }
+            PlayerAction::PickupItemBelow => {
+                // Handled by its own system; ignore here to keep match exhaustive
+            }
         }
     }
 }
