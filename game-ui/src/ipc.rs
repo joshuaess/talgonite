@@ -103,6 +103,9 @@ pub enum UiToCore {
     ShowHotbar1 {
         show: bool,
     },
+    ShowHotbar2 {
+        show: bool,
+    },
     RebindKey {
         action: String,
         new_key: String,
@@ -232,6 +235,7 @@ pub enum CoreToUi {
         music_volume: f32,
         scale: f32,
         show_hotbar_1: bool,
+        show_hotbar_2: bool,
         key_bindings: KeyBindingsUi,
     },
 }

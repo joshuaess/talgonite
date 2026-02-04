@@ -59,6 +59,14 @@ pub fn wire_settings_callbacks(slint_app: &MainWindow, tx: Sender<UiToCore>) {
         });
     }
 
+    // Show hotbar 2 changed
+    {
+        let tx = tx.clone();
+        settings_state.on_show_hotbar_2_changed(move |show| {
+            let _ = tx.send(UiToCore::ShowHotbar2 { show });
+        });
+    }
+
     // Start rebind
     {
         let slint_app_weak = slint_app.as_weak();

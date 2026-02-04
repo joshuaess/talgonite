@@ -21,5 +21,13 @@ export component HotbarsTab inherits VerticalBox {
                 SettingsState.show-hotbar-1-changed(SettingsState.show-hotbar-1);
             }
         }
+
+        CheckBox {
+            text: "Show Hotbar 2";
+            checked <=> SettingsState.show-hotbar-2;
+            toggled => {
+                SettingsState.show-hotbar-2-changed(SettingsState.show-hotbar-2);
+            }
+        }
     }
 }

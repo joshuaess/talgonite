@@ -339,6 +339,9 @@ fn handle_ui_inbound_ingame(
             UiToCore::ShowHotbar1 { show } => {
                 settings.graphics.show_hotbar_1 = *show;
             }
+            UiToCore::ShowHotbar2 { show } => {
+                settings.graphics.show_hotbar_2 = *show;
+            }
             UiToCore::RebindKey {
                 action,
                 new_key,
@@ -985,6 +988,9 @@ fn handle_ui_inbound_login(
             }
             UiToCore::ShowHotbar1 { show } => {
                 settings.graphics.show_hotbar_1 = *show;
+            }
+            UiToCore::ShowHotbar2 { show } => {
+                settings.graphics.show_hotbar_2 = *show;
             }
             UiToCore::RebindKey {
                 action,

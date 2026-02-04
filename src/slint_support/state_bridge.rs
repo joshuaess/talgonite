@@ -600,6 +600,7 @@ pub fn apply_core_to_slint(
                 music_volume,
                 scale,
                 show_hotbar_1,
+                show_hotbar_2,
                 key_bindings,
             } => {
                 let settings_state =
@@ -618,6 +619,7 @@ pub fn apply_core_to_slint(
                 settings_state.set_music_volume(*music_volume);
                 settings_state.set_scale(*scale);
                 settings_state.set_show_hotbar_1(*show_hotbar_1);
+                settings_state.set_show_hotbar_2(*show_hotbar_2);
 
                 set_keys!(move_up);
                 set_keys!(move_down);
