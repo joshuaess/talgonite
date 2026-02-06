@@ -256,9 +256,11 @@ fn handle_ui_inbound_ingame(
                     (menu_ctx.pursuit_id, args)
                 } else {
                     let pursuit_id = *id as u16;
-                    let args = if !menu_ctx.args.is_empty() {
+                    let args = if !menu_ctx.args.is_empty() || !name.is_empty() {
                         let mut topics = Vec::new();
-                        topics.push(menu_ctx.args.clone());
+                        if !menu_ctx.args.is_empty() {
+                            topics.push(menu_ctx.args.clone());
+                        }
                         if !name.is_empty() {
                             topics.push(name.clone());
                         }
