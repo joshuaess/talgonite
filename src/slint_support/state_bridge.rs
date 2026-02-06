@@ -164,15 +164,7 @@ fn reset_game_state_for_main_menu(window: &crate::MainWindow) {
     game_state.set_show_world_map(false);
 
     // Reset NPC dialog state
-    let npc_dialog = slint::ComponentHandle::global::<crate::NpcDialogState>(window);
-    npc_dialog.set_visible(false);
-    npc_dialog.set_text_entry_visible(false);
-    npc_dialog.set_npc_name(slint::SharedString::from(""));
-    npc_dialog.set_npc_portrait(slint::Image::default());
-    npc_dialog.set_dialog_text(slint::SharedString::from(""));
-    npc_dialog.set_menu_entries(empty_model());
-    npc_dialog.set_text_entry_prompt(slint::SharedString::from(""));
-    npc_dialog.set_text_entry_args(slint::SharedString::from(""));
+    slint::ComponentHandle::global::<crate::NpcDialogState>(window).invoke_reset();
 
     let gold_drop = slint::ComponentHandle::global::<GoldDropState>(window);
     gold_drop.set_visible(false);
@@ -503,19 +495,15 @@ pub fn apply_core_to_slint(
                 entries,
             } => {
                 let npc_dialog = slint::ComponentHandle::global::<crate::NpcDialogState>(&strong);
-                npc_dialog.set_npc_name(slint::SharedString::from(title.as_str()));
-                npc_dialog.set_dialog_text(slint::SharedString::from(text.as_str()));
 
-                if let Ok(portrait) = asset_loader.load_npc_portrait(
-                    &game_files,
-                    &metafile_store,
-                    *sprite_id,
-                    Some(title.as_str()),
-                ) {
-                    npc_dialog.set_npc_portrait(portrait);
-                } else {
-                    npc_dialog.set_npc_portrait(slint::Image::default());
-                }
+                let npc_portrait = asset_loader
+                    .load_npc_portrait(
+                        &game_files,
+                        &metafile_store,
+                        *sprite_id,
+                        Some(title.as_str()),
+                    )
+                    .unwrap_or_default();
 
                 let mut slint_entries = Vec::with_capacity(entries.len());
                 for entry in entries {
@@ -554,24 +542,21 @@ pub fn apply_core_to_slint(
                     });
                 }
 
-                npc_dialog
-                    .set_menu_entries(slint::ModelRc::new(slint::VecModel::from(slint_entries)));
-                npc_dialog
-                    .set_is_shop(*entry_type != crate::webui::ipc::MenuEntryType::TextOptions);
-                npc_dialog.set_text_entry_visible(false);
-                npc_dialog.set_visible(true);
+                npc_dialog.set_data(crate::NpcDialogData {
+                    visible: true,
+                    text_entry_visible: false,
+                    is_shop: *entry_type != crate::webui::ipc::MenuEntryType::TextOptions,
+                    interaction_enabled: true,
+                    npc_name: slint::SharedString::from(title.as_str()),
+                    npc_portrait,
+                    dialog_text: slint::SharedString::from(text.as_str()),
+                    menu_entries: slint::ModelRc::new(slint::VecModel::from(slint_entries)),
+                    text_entry_prompt: slint::SharedString::default(),
+                    text_entry_args: slint::SharedString::default(),
+                });
             }
             crate::webui::ipc::CoreToUi::DisplayMenuClose => {
-                let npc_dialog = slint::ComponentHandle::global::<crate::NpcDialogState>(&strong);
-                npc_dialog.set_visible(false);
-                npc_dialog.set_text_entry_visible(false);
-                npc_dialog.set_is_shop(false);
-                npc_dialog.set_npc_name(slint::SharedString::default());
-                npc_dialog.set_npc_portrait(slint::Image::default());
-                npc_dialog.set_dialog_text(slint::SharedString::default());
-                npc_dialog.set_menu_entries(slint::ModelRc::new(slint::VecModel::default()));
-                npc_dialog.set_text_entry_prompt(slint::SharedString::default());
-                npc_dialog.set_text_entry_args(slint::SharedString::default());
+                slint::ComponentHandle::global::<crate::NpcDialogState>(&strong).invoke_reset();
             }
             crate::webui::ipc::CoreToUi::DisplayMenuTextEntry {
                 title,
@@ -582,21 +567,15 @@ pub fn apply_core_to_slint(
                 entries,
             } => {
                 let npc_dialog = slint::ComponentHandle::global::<crate::NpcDialogState>(&strong);
-                npc_dialog.set_npc_name(slint::SharedString::from(title.as_str()));
-                npc_dialog.set_dialog_text(slint::SharedString::from(text.as_str()));
-                npc_dialog.set_text_entry_prompt(slint::SharedString::from(prompt.as_str()));
-                npc_dialog.set_text_entry_args(slint::SharedString::from(args.as_str()));
 
-                if let Ok(portrait) = asset_loader.load_npc_portrait(
-                    &game_files,
-                    &metafile_store,
-                    *sprite_id,
-                    Some(title.as_str()),
-                ) {
-                    npc_dialog.set_npc_portrait(portrait);
-                } else {
-                    npc_dialog.set_npc_portrait(slint::Image::default());
-                }
+                let npc_portrait = asset_loader
+                    .load_npc_portrait(
+                        &game_files,
+                        &metafile_store,
+                        *sprite_id,
+                        Some(title.as_str()),
+                    )
+                    .unwrap_or_default();
 
                 let mut slint_entries = Vec::with_capacity(entries.len());
                 for entry in entries {
@@ -608,11 +587,18 @@ pub fn apply_core_to_slint(
                     });
                 }
 
-                npc_dialog
-                    .set_menu_entries(slint::ModelRc::new(slint::VecModel::from(slint_entries)));
-                npc_dialog.set_text_entry_visible(true);
-                npc_dialog.set_is_shop(false);
-                npc_dialog.set_visible(true);
+                npc_dialog.set_data(crate::NpcDialogData {
+                    visible: true,
+                    text_entry_visible: true,
+                    is_shop: false,
+                    interaction_enabled: true,
+                    npc_name: slint::SharedString::from(title.as_str()),
+                    npc_portrait,
+                    dialog_text: slint::SharedString::from(text.as_str()),
+                    menu_entries: slint::ModelRc::new(slint::VecModel::from(slint_entries)),
+                    text_entry_prompt: slint::SharedString::from(prompt.as_str()),
+                    text_entry_args: slint::SharedString::from(args.as_str()),
+                });
             }
             crate::webui::ipc::CoreToUi::GoldDropPrompt { max_gold, error } => {
                 let gold_drop = slint::ComponentHandle::global::<GoldDropState>(&strong);
