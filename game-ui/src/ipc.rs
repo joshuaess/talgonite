@@ -205,8 +205,6 @@ pub enum CoreToUi {
         sprite_id: u16,
         /// What type of content - determines how icons are loaded
         entry_type: MenuEntryType,
-        /// Pursuit ID for shop responses (0 for text menus)
-        pursuit_id: u16,
         entries: Vec<MenuEntryUi>,
     },
     /// Close any open menu/dialog
@@ -219,7 +217,6 @@ pub enum CoreToUi {
         sprite_id: u16,
         /// Context arg (e.g., item name)
         args: String,
-        pursuit_id: u16,
         entries: Vec<MenuEntryUi>,
     },
     SettingsSync {

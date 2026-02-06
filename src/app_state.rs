@@ -99,7 +99,6 @@ pub fn cleanup_ingame_resources(
         state.window_type = ActiveWindowType::None;
         state.entity_type = None;
         state.entity_id = 0;
-        state.pursuit_id = 0;
         state.menu_type = None;
         state.args.clear();
         state.dialog_id = None;

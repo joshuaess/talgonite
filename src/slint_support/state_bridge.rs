@@ -168,7 +168,6 @@ fn reset_game_state_for_main_menu(window: &crate::MainWindow) {
     npc_dialog.set_menu_entries(empty_model());
     npc_dialog.set_text_entry_prompt(slint::SharedString::from(""));
     npc_dialog.set_text_entry_args(slint::SharedString::from(""));
-    npc_dialog.set_text_entry_pursuit_id(0);
 
     game_state.set_inventory(empty_model());
     game_state.set_skills(empty_model());
@@ -476,7 +475,6 @@ pub fn apply_core_to_slint(
                 text,
                 sprite_id,
                 entry_type,
-                pursuit_id: _,
                 entries,
             } => {
                 let npc_dialog = slint::ComponentHandle::global::<crate::NpcDialogState>(&strong);
@@ -549,7 +547,6 @@ pub fn apply_core_to_slint(
                 npc_dialog.set_menu_entries(slint::ModelRc::new(slint::VecModel::default()));
                 npc_dialog.set_text_entry_prompt(slint::SharedString::default());
                 npc_dialog.set_text_entry_args(slint::SharedString::default());
-                npc_dialog.set_text_entry_pursuit_id(0);
             }
             crate::webui::ipc::CoreToUi::DisplayMenuTextEntry {
                 title,
@@ -557,7 +554,6 @@ pub fn apply_core_to_slint(
                 prompt,
                 sprite_id,
                 args,
-                pursuit_id,
                 entries,
             } => {
                 let npc_dialog = slint::ComponentHandle::global::<crate::NpcDialogState>(&strong);
@@ -565,7 +561,6 @@ pub fn apply_core_to_slint(
                 npc_dialog.set_dialog_text(slint::SharedString::from(text.as_str()));
                 npc_dialog.set_text_entry_prompt(slint::SharedString::from(prompt.as_str()));
                 npc_dialog.set_text_entry_args(slint::SharedString::from(args.as_str()));
-                npc_dialog.set_text_entry_pursuit_id(*pursuit_id as i32);
 
                 if let Ok(portrait) = asset_loader.load_npc_portrait(
                     &game_files,

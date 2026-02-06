@@ -39,7 +39,7 @@ pub struct ActiveMenuContext {
     pub entity_id: u32,
     /// For shop menus and text entry, this is the pursuit_id to send back
     /// For text (list) menus, this is 0 (pursuit_id comes from the selected option)
-    pub pursuit_id: u16,
+    pub pursuit_id: Option<u16>,
     pub menu_type: Option<MenuType>,
     pub args: String,
     pub dialog_id: Option<u16>,
@@ -224,7 +224,7 @@ fn handle_ui_inbound_ingame(
                         outbox.send(&packets::client::DialogInteraction {
                             entity_type,
                             entity_id: menu_ctx.entity_id,
-                            pursuit_id: menu_ctx.pursuit_id,
+                            pursuit_id: menu_ctx.pursuit_id.unwrap_or(0),
                             dialog_id: final_dialog_id as u16,
                             args,
                         });
@@ -232,52 +232,40 @@ fn handle_ui_inbound_ingame(
                     continue;
                 }
 
-                let (pursuit_id, args) = if menu_ctx.pursuit_id > 0 {
-                    let is_slot_interaction = matches!(
-                        menu_ctx.menu_type,
-                        Some(MenuType::ShowPlayerItems)
-                            | Some(MenuType::ShowPlayerSpells)
-                            | Some(MenuType::ShowPlayerSkills)
-                    );
+                let is_slot_interaction = matches!(
+                    menu_ctx.menu_type,
+                    Some(MenuType::ShowPlayerItems)
+                        | Some(MenuType::ShowPlayerSpells)
+                        | Some(MenuType::ShowPlayerSkills)
+                );
 
-                    let args = if is_slot_interaction {
-                        packets::client::MenuInteractionArgs::Slot(*id as u8)
-                    } else {
-                        let mut topics = Vec::new();
-                        if !menu_ctx.args.is_empty() {
-                            topics.push(menu_ctx.args.clone());
-                        }
-                        if !name.is_empty() {
-                            topics.push(name.clone());
-                        }
-                        packets::client::MenuInteractionArgs::Topics(topics)
-                    };
-
-                    (menu_ctx.pursuit_id, args)
+                let args = if is_slot_interaction {
+                    packets::client::MenuInteractionArgs::Slot(*id as u8)
                 } else {
-                    let pursuit_id = *id as u16;
-                    let args = if !menu_ctx.args.is_empty() || !name.is_empty() {
-                        let mut topics = Vec::new();
-                        if !menu_ctx.args.is_empty() {
-                            topics.push(menu_ctx.args.clone());
-                        }
-                        if !name.is_empty() {
-                            topics.push(name.clone());
-                        }
-                        packets::client::MenuInteractionArgs::Topics(topics)
-                    } else {
+                    let mut topics = Vec::new();
+                    if !menu_ctx.args.is_empty() {
+                        topics.push(menu_ctx.args.clone());
+                    }
+                    if !name.is_empty() {
+                        topics.push(name.clone());
+                    }
+
+                    if topics.is_empty() {
                         packets::client::MenuInteractionArgs::Slot(0)
-                    };
-                    (pursuit_id, args)
+                    } else {
+                        packets::client::MenuInteractionArgs::Topics(topics)
+                    }
                 };
 
                 if let Some(entity_type) = menu_ctx.entity_type {
                     outbox.send(&packets::client::MenuInteraction {
                         entity_type,
                         entity_id: menu_ctx.entity_id,
-                        pursuit_id,
+                        pursuit_id: menu_ctx.pursuit_id.unwrap_or(*id as _),
                         args,
                     });
+                } else {
+                    tracing::warn!("MenuSelect with no entity_type in context");
                 }
             }
             UiToCore::MenuClose => {
@@ -286,7 +274,7 @@ fn handle_ui_inbound_ingame(
                         outbox.send(&packets::client::DialogInteraction {
                             entity_type,
                             entity_id: menu_ctx.entity_id,
-                            pursuit_id: menu_ctx.pursuit_id,
+                            pursuit_id: menu_ctx.pursuit_id.unwrap_or(0),
                             dialog_id,
                             args: packets::client::DialogInteractionArgs::None,
                         });
@@ -1151,7 +1139,7 @@ fn bridge_chat_events(
                         menu_ctx.window_type = ActiveWindowType::Info;
                         menu_ctx.dialog_id = None;
                         menu_ctx.menu_type = None;
-                        menu_ctx.pursuit_id = 0;
+                        menu_ctx.pursuit_id = None;
                         menu_ctx.entity_type = None;
                         menu_ctx.entity_id = 0;
 
@@ -1160,7 +1148,6 @@ fn bridge_chat_events(
                             text: pkt.message.clone(),
                             sprite_id: 0,
                             entry_type: crate::webui::ipc::MenuEntryType::TextOptions,
-                            pursuit_id: 0,
                             entries: vec![MenuEntryUi::text_option("Close".to_string(), 0)],
                         }));
                         continue;
@@ -1236,7 +1223,7 @@ fn bridge_session_events(
                         menu_ctx.window_type = ActiveWindowType::Dialog;
                         menu_ctx.entity_type = Some(header.entity_type);
                         menu_ctx.entity_id = header.source_id;
-                        menu_ctx.pursuit_id = header.pursuit_id;
+                        menu_ctx.pursuit_id = Some(header.pursuit_id);
                         menu_ctx.dialog_id = Some(header.dialog_id);
                         menu_ctx.menu_type = None;
                         menu_ctx.args.clear();
@@ -1284,7 +1271,6 @@ fn bridge_session_events(
                                 prompt,
                                 sprite_id: header.sprite,
                                 args: String::new(),
-                                pursuit_id: header.pursuit_id,
                                 entries,
                             }));
                         } else {
@@ -1293,7 +1279,6 @@ fn bridge_session_events(
                                 text: header.text.clone(),
                                 sprite_id: header.sprite,
                                 entry_type: crate::webui::ipc::MenuEntryType::TextOptions,
-                                pursuit_id: header.pursuit_id,
                                 entries,
                             }));
                         }
@@ -1371,14 +1356,14 @@ fn bridge_session_events(
 
                 match &pkt.payload {
                     DisplayMenuPayload::Menu { options } => {
-                        menu_ctx.pursuit_id = 0;
+                        menu_ctx.pursuit_id = None;
                         entries = options
                             .iter()
                             .map(|(text, id)| MenuEntryUi::text_option(text.clone(), *id as i32))
                             .collect();
                     }
                     DisplayMenuPayload::MenuWithArgs { args, options } => {
-                        menu_ctx.pursuit_id = 0;
+                        menu_ctx.pursuit_id = None;
                         menu_ctx.args = args.clone();
                         entries = options
                             .iter()
@@ -1386,7 +1371,7 @@ fn bridge_session_events(
                             .collect();
                     }
                     DisplayMenuPayload::ShowItems { pursuit_id, items } => {
-                        menu_ctx.pursuit_id = *pursuit_id;
+                        menu_ctx.pursuit_id = Some(*pursuit_id);
                         entry_type = crate::webui::ipc::MenuEntryType::Items;
                         entries = items
                             .iter()
@@ -1403,7 +1388,7 @@ fn bridge_session_events(
                             .collect();
                     }
                     DisplayMenuPayload::ShowSpells { pursuit_id, spells } => {
-                        menu_ctx.pursuit_id = *pursuit_id;
+                        menu_ctx.pursuit_id = Some(*pursuit_id);
                         entry_type = crate::webui::ipc::MenuEntryType::Spells;
                         entries = spells
                             .iter()
@@ -1418,7 +1403,7 @@ fn bridge_session_events(
                             .collect();
                     }
                     DisplayMenuPayload::ShowSkills { pursuit_id, skills } => {
-                        menu_ctx.pursuit_id = *pursuit_id;
+                        menu_ctx.pursuit_id = Some(*pursuit_id);
                         entry_type = crate::webui::ipc::MenuEntryType::Skills;
                         entries = skills
                             .iter()
@@ -1433,16 +1418,16 @@ fn bridge_session_events(
                             .collect();
                     }
                     DisplayMenuPayload::TextEntry { pursuit_id } => {
-                        menu_ctx.pursuit_id = *pursuit_id;
+                        menu_ctx.pursuit_id = Some(*pursuit_id);
                         is_text_entry = true;
                     }
                     DisplayMenuPayload::TextEntryWithArgs { args, pursuit_id } => {
-                        menu_ctx.pursuit_id = *pursuit_id;
+                        menu_ctx.pursuit_id = Some(*pursuit_id);
                         menu_ctx.args = args.clone();
                         is_text_entry = true;
                     }
                     DisplayMenuPayload::ShowPlayerItems { pursuit_id, slots } => {
-                        menu_ctx.pursuit_id = *pursuit_id;
+                        menu_ctx.pursuit_id = Some(*pursuit_id);
                         entry_type = crate::webui::ipc::MenuEntryType::Items;
                         entries = slots
                             .iter()
@@ -1460,7 +1445,7 @@ fn bridge_session_events(
                             .collect();
                     }
                     DisplayMenuPayload::ShowPlayerSpells { pursuit_id } => {
-                        menu_ctx.pursuit_id = *pursuit_id;
+                        menu_ctx.pursuit_id = Some(*pursuit_id);
                         entry_type = crate::webui::ipc::MenuEntryType::Spells;
                         entries = ability_state
                             .spells
@@ -1475,7 +1460,7 @@ fn bridge_session_events(
                             .collect();
                     }
                     DisplayMenuPayload::ShowPlayerSkills { pursuit_id } => {
-                        menu_ctx.pursuit_id = *pursuit_id;
+                        menu_ctx.pursuit_id = Some(*pursuit_id);
                         entry_type = crate::webui::ipc::MenuEntryType::Skills;
                         entries = ability_state
                             .skills
@@ -1498,7 +1483,6 @@ fn bridge_session_events(
                         prompt: pkt.header.text.clone(),
                         sprite_id: pkt.header.sprite,
                         args: menu_ctx.args.clone(),
-                        pursuit_id: menu_ctx.pursuit_id,
                         entries,
                     }));
                 } else {
@@ -1507,7 +1491,6 @@ fn bridge_session_events(
                         text: pkt.header.text.clone(),
                         sprite_id: pkt.header.sprite,
                         entry_type,
-                        pursuit_id: menu_ctx.pursuit_id,
                         entries,
                     }));
                 }
