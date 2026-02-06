@@ -161,6 +161,7 @@ impl InputBindings {
         bind!(settings, Settings);
         bind!(refresh, Refresh);
         bind!(basic_attack, BasicAttack);
+        bind!(item_pickup_below, ItemPickupBelow);
 
         bind!(hotbar_slot_1, HotbarSlot1);
         bind!(hotbar_slot_2, HotbarSlot2);

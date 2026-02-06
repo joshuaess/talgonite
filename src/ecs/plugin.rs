@@ -89,6 +89,14 @@ impl Plugin for GamePlugin {
                     .run_if(in_state(crate::app_state::AppState::InGame))
                     .in_set(GameSet::Movement),
             )
+           // === Item systems ===
+           .add_systems(
+               Update,
+               systems::keyboard_item_pickup_system
+                   .run_if(in_state(crate::app_state::AppState::InGame))
+                   .after(crate::plugins::input::InputPumpSet)
+                   .in_set(GameSet::EventProcessing),
+           )
             // === Physics Systems ===
             .add_systems(
                 Update,
