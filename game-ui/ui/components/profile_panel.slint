@@ -95,6 +95,34 @@ component FolderTab inherits Rectangle {
     ]
 }
 
+component StatRow inherits Rectangle {
+    in property <string> label;
+    in property <string> value;
+    height: 18px;
+    HorizontalLayout {
+        padding-left: 3px;
+        padding-right: 6px;
+        spacing: 3px;
+
+        Text {
+            text: label;
+            font-size: 11px;
+            color: Theme.foreground-muted;
+            vertical-alignment: center;
+        }
+
+        Text {
+            text: value;
+            font-size: 11px;
+            font-weight: 600;
+            color: Theme.foreground;
+            font-family: "JetBrains Mono";
+            horizontal-alignment: left;
+            vertical-alignment: center;
+        }
+    }
+}
+
 export component ProfilePanel inherits Rectangle {
     property <ProfileData> data: GameState.profile;
     property <string> active-tab: "profile";
@@ -142,7 +170,7 @@ export component ProfilePanel inherits Rectangle {
                 HorizontalLayout {
                     spacing: 8px;
                     alignment: center;
-                    
+
                     // Column 1: Far Left
                     VerticalLayout {
                         spacing: 4px;
@@ -199,7 +227,7 @@ export component ProfilePanel inherits Rectangle {
                     VerticalLayout {
                         spacing: 8px;
                         alignment: center;
-                        
+
                         // Helmets on top
                         HorizontalLayout {
                             spacing: 4px;
@@ -320,7 +348,7 @@ export component ProfilePanel inherits Rectangle {
                 }
 
                 if data.is-self: Rectangle {
-                    property <EquipmentSlotData> hovered-item: 
+                    property <EquipmentSlotData> hovered-item:
                         eq1.has-hover ? eq1.slot-data : eq2.has-hover ? eq2.slot-data : eq3.has-hover ? eq3.slot-data : eq4.has-hover ? eq4.slot-data : eq5.has-hover ? eq5.slot-data : eq6.has-hover ? eq6.slot-data : eq7.has-hover ? eq7.slot-data : eq8.has-hover ? eq8.slot-data : eq9.has-hover ? eq9.slot-data : eq10.has-hover ? eq10.slot-data : eq11.has-hover ? eq11.slot-data : eq12.has-hover ? eq12.slot-data : eq13.has-hover ? eq13.slot-data : eq14.has-hover ? eq14.slot-data : eq15.has-hover ? eq15.slot-data : eq16.has-hover ? eq16.slot-data : eq17.has-hover ? eq17.slot-data : eq18.has-hover ? eq18.slot-data : { has-item: false };
 
                     height: 60px;
@@ -345,6 +373,40 @@ export component ProfilePanel inherits Rectangle {
                         }
                     }
                 }
+
+                if GameState.profile.is-self: stats := Rectangle {
+                    background: #00000030;
+                    border-radius: 6px;
+                    border-width: 1px;
+                    border-color: #00000050;
+                    VerticalLayout {
+                        padding: 6px;
+                        spacing: 6px;
+                        HorizontalLayout {
+                            spacing: 8px;
+                            VerticalLayout {
+                                StatRow { label: "STR"; value: data.stat-str; }
+                                StatRow { label: "INT"; value: data.stat-int; }
+                                StatRow { label: "WIS"; value: data.stat-wis; }
+                                StatRow { label: "CON"; value: data.stat-con; }
+                                StatRow { label: "DEX"; value: data.stat-dex; }
+                            }
+
+                            Rectangle {
+                                width: 1px;
+                                background: #ffffff10;
+                            }
+
+                            VerticalLayout {
+                                StatRow { label: "Level"; value: data.level; }
+                                StatRow { label: "Experience"; value: data.experience; }
+                                StatRow { label: "To Next"; value: data.experience-to-next-level; }
+                                StatRow { label: "Ability Level"; value: data.ability-level; }
+                                StatRow { label: "Stat Points Remaining"; value: data.unspent-stat-points; }
+                            }
+                        }
+                    }
+                }
             }
 
             Rectangle {
@@ -354,7 +416,6 @@ export component ProfilePanel inherits Rectangle {
 
             VerticalLayout {
                 spacing: 12px;
-
                 HorizontalLayout {
                     spacing: 12px;
                     if data.portrait.width > 0: Rectangle {
@@ -447,7 +508,55 @@ export component ProfilePanel inherits Rectangle {
                     }
                 }
 
-                Rectangle { }
+                Rectangle {}
+
+                if GameState.profile.is-self: stats-secondary := Rectangle {
+                    background: #00000030;
+                    border-radius: 6px;
+                    border-width: 1px;
+                    border-color: #00000050;
+                    VerticalLayout {
+                        padding: 6px;
+                        spacing: 3px;
+                        HorizontalLayout {
+                            spacing: 8px;
+                            VerticalLayout {
+                                spacing: 2px;
+                                StatRow { label: "Atk Elem"; value: data.attack-element; }
+                                StatRow { label: "Def Elem"; value: data.defense-element; }
+                                StatRow { label: "Magic Res"; value: data.magic-resistance; }
+                            }
+
+                            Rectangle { width: 1px; background: #ffffff10; }
+
+                            VerticalLayout {
+                                spacing: 2px;
+                                StatRow { label: "AC"; value: data.ac; }
+                                StatRow { label: "DMG"; value: data.dmg; }
+                                StatRow { label: "HIT"; value: data.hit; }
+                            }
+                        }
+
+                        Rectangle { height: 1px; background: #ffffff10; }
+
+                        HorizontalLayout {
+                            spacing: 8px;
+                            padding-top: 7px;
+                            VerticalLayout {
+                                spacing: 2px;
+                                StatRow { label: "GP"; value: data.game-points; }
+                            }
+
+                            Rectangle { width: 1px; background: #ffffff10; }
+
+                            VerticalLayout {
+                                spacing: 2px;
+
+                                Rectangle { width: 55px;}
+                            }
+                        }
+                    }
+                }
 
                 if !GameState.profile.is-self: HorizontalLayout {
                     alignment: start;
