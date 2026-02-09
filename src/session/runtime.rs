@@ -269,6 +269,9 @@ fn process_net_packets(
                             player_attrs.dmg = secondary.dmg;
                             player_attrs.hit = secondary.hit;
                         }
+                        if let Some(exp_gold) = &attrs.exp_gold {
+                            player_attrs.gold = exp_gold.gold;
+                        }
                     }
                 }
                 &server::Codes::Equipment => {

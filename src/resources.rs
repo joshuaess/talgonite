@@ -28,6 +28,7 @@ pub struct PlayerAttributes {
     pub ac: i8,
     pub dmg: u8,
     pub hit: u8,
+    pub gold: u32,
 }
 
 #[derive(Resource)]
