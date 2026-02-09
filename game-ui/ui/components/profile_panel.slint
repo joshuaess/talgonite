@@ -429,10 +429,8 @@ export component ProfilePanel inherits Rectangle {
                             }
 
                             VerticalLayout {
-                                StatRow { label: "Level"; value: data.level; }
                                 StatRow { label: "Experience"; value: data.experience; }
                                 StatRow { label: "To Next"; value: data.experience-to-next-level; }
-                                StatRow { label: "Ability Level"; value: data.ability-level; }
                                 StatRow { label: "Stat Points Remaining"; value: data.unspent-stat-points; }
                             }
                         }
@@ -449,7 +447,8 @@ export component ProfilePanel inherits Rectangle {
                 spacing: 12px;
                 HorizontalLayout {
                     spacing: 12px;
-                    if data.portrait.width > 0: Rectangle {
+                    if true: Rectangle {
+                    // if data.portrait.width > 0: Rectangle {
                         width: 68px;
                         height: 88px;
                         background: #00000030;
@@ -467,8 +466,9 @@ export component ProfilePanel inherits Rectangle {
                     }
 
                     VerticalLayout {
-                        spacing: 2px;
+                        spacing: 3px;
                         alignment: start;
+
                         Text {
                             text: data.name;
                             font-size: 16px;
@@ -482,20 +482,77 @@ export component ProfilePanel inherits Rectangle {
                             color: #60a5fa;
                         }
 
-                        if data.guild != "" || data.title != "": VerticalLayout {
-                            spacing: 1px;
-                            if data.guild != "": Text {
-                                text: "<" + data.guild + "> " + data.guild-rank;
-                                font-size: 11px;
-                                color: #a0a0a0;
-                            }
-                            if data.title != "": Text {
-                                text: "\"" + data.title + "\"";
-                                font-size: 11px;
-                                color: #c084fc;
+                        Rectangle {
+                            VerticalLayout {
+                                spacing: 6px;
+                                HorizontalLayout {
+                                    spacing: 6px;
+                                    Rectangle {
+                                        background: Theme.foreground.with-alpha(0.15);
+                                        border-radius: 4px;
+                                        border-width: 1px;
+                                        border-color: Theme.border-panel-highlight.with-alpha(0.3);
+                                        HorizontalLayout {
+                                            padding: 4px;
+                                            padding-left: 6px;
+                                            padding-right: 6px;
+                                            Text {
+                                                text: "Lv " + data.level;
+                                                font-size: Theme.font-size-small;
+                                                font-weight: 700;
+                                                color: Theme.foreground-strong;
+                                            }
+                                        }
+                                    }
+
+                                    Rectangle {
+                                        background: Theme.success.with-alpha(0.15);
+                                        border-radius: 4px;
+                                        border-width: 1px;
+                                        border-color: Theme.success.with-alpha(0.3);
+                                        HorizontalLayout {
+                                            padding: 4px;
+                                            padding-left: 6px;
+                                            padding-right: 6px;
+                                            Text {
+                                                text: "AB " + data.ability-level;
+                                                font-size: Theme.font-size-small;
+                                                font-weight: 700;
+                                                color: Theme.foreground-strong;
+                                            }
+                                        }
+                                    }
+
+                                    Rectangle { }
+                                }
+
+                                if data.guild != "f" || data.title != "": Rectangle {
+                                    background: #00000020;
+
+                                    VerticalLayout {
+                                    // if data.guild != "" || data.title != "": VerticalLayout {}
+                                        spacing: 3px;
+                                        if data.guild != "f": Text {
+                                            text: "<testguild>";
+                                            font-size: 11px;
+                                            color: #a0a0a0;
+                                        }
+                                        if data.title != "f": Text {
+                                            text: "guild title";
+                                            font-size: 11px;
+                                            color: #c084fc;
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
+                }
+
+                if data.guild != "f" || data.title != "": Rectangle {
+                // if data.guild != "" || data.title != "": Rectangle {
+                    height: 1px;
+                    background: Theme.border-overlay;
                 }
 
                 HorizontalLayout {
