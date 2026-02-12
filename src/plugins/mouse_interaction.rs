@@ -9,6 +9,7 @@ use crate::ecs::spell_casting::SpellCastingState;
 use crate::events::{EntityClickEvent, EntityHoverEvent, TileClickEvent, WallClickEvent};
 use crate::network::PacketOutbox;
 use crate::resources::ZoomState;
+use crate::settings_types::{Settings, NpcInteractionClicks};
 use crate::slint_plugin::{ShowSelfProfileEvent, SlintDoubleClickEvent};
 use crate::webui::plugin::CursorPosition;
 use crate::{Camera, WindowSurface};
@@ -255,6 +256,7 @@ fn handle_entity_clicks(
     mut events: MessageReader<EntityClickEvent>,
     mut profile_events: MessageWriter<ShowSelfProfileEvent>,
     spell_casting: Res<SpellCastingState>,
+    settings: Res<Settings>,
     query: Query<(
         &EntityId,
         &Position,
@@ -289,17 +291,24 @@ fn handle_entity_clicks(
                             destination_slot: 0,
                             source_point: (position.x as u16, position.y as u16),
                         });
-                    } else if player.is_some() {
+                    } else if player.is_some(){
                         // Optimistically clear previous other player data
                         profile_events.write(ShowSelfProfileEvent::OtherRequested);
                         outbox.send(&Click::TargetEntity(entity_id.id));
                     } else if npc.is_some() {
-                        outbox.send(&Click::TargetEntity(entity_id.id));
+                        if settings.gameplay.npc_interaction_clicks == NpcInteractionClicks::DoubleClick {
+                            outbox.send(&Click::TargetEntity(entity_id.id));
+                        }
                     }
                 } else {
-                    // Single click for players/NPCs is now ignored here to prevent
+                    // Single click for players is now ignored here to prevent
                     // opening profiles on single clicks. Targeting is handled
                     // separately by spell systems or client-side selection.
+                    if settings.gameplay.npc_interaction_clicks == NpcInteractionClicks::SingleClick {
+                        if npc.is_some() {
+                            outbox.send(&Click::TargetEntity(entity_id.id));
+                        }
+                    }
                 }
             }
         }

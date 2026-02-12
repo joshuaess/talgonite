@@ -335,6 +335,10 @@ fn handle_ui_inbound_ingame(
             UiToCore::ShowHotbar2 { show } => {
                 settings.graphics.show_hotbar_2 = *show;
             }
+            UiToCore::NpcInteractionClicksChange { mode } => {
+                settings.gameplay.npc_interaction_clicks =
+                    crate::settings_types::NpcInteractionClicks::from_u8(*mode);
+            }
             UiToCore::RebindKey {
                 action,
                 new_key,
@@ -1125,6 +1129,10 @@ fn handle_ui_inbound_login(
             }
             UiToCore::ShowHotbar2 { show } => {
                 settings.graphics.show_hotbar_2 = *show;
+            }
+            UiToCore::NpcInteractionClicksChange { mode } => {
+                settings.gameplay.npc_interaction_clicks =
+                    crate::settings_types::NpcInteractionClicks::from_u8(*mode);
             }
             UiToCore::RebindKey {
                 action,

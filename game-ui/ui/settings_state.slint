@@ -8,6 +8,7 @@ export global SettingsState {
 
     in-out property <bool> show-hotbar-1: true;  // Toggle to show/hide hotbar 1
     in-out property <bool> show-hotbar-2: true;  // Toggle to show/hide hotbar 2
+    in-out property <int> npc-interaction-clicks: 1; // 0=Single click, 1=Double click
     in-out property <string> key-move-up: "ArrowUp";
     in-out property <string> key-move-up-2: "";
     in-out property <string> key-move-down: "ArrowDown";
@@ -103,6 +104,7 @@ export global SettingsState {
     callback scale-changed(float);
     callback show-hotbar-1-changed(bool);
     callback show-hotbar-2-changed(bool);
+    callback npc-interaction-clicks-changed(int);
     callback start-rebind(string, int);
     callback rebind-key(string);
     callback unbind-key(string, int);

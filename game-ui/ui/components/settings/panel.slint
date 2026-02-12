@@ -5,6 +5,7 @@ import { MenuButton } from "widgets.slint";
 import { GraphicsTab } from "graphics.slint";
 import { ControlsTab } from "controls.slint";
 import { HotbarsTab } from "hotbars.slint";
+import { MouseTab } from "mouse.slint";
 import { BasePanel } from "../base_panel.slint";
 
 export component SettingsPanel inherits BasePanel {
@@ -53,6 +54,14 @@ export component SettingsPanel inherits BasePanel {
                         active-tab = 2;
                     }
                 }
+
+                MenuButton {
+                    label: "Mouse";
+                    selected: active-tab == 3;
+                    clicked => {
+                        active-tab = 3;
+                    }
+                }
             }
 
             Rectangle {
@@ -77,6 +86,12 @@ export component SettingsPanel inherits BasePanel {
                 if active-tab == 2: ScrollView {
                     viewport-width: self.visible-width;
                     HotbarsTab {
+                        alignment: start;
+                    }
+                }
+                if active-tab == 3: ScrollView {
+                    viewport-width: self.visible-width;
+                    MouseTab {
                         alignment: start;
                     }
                 }

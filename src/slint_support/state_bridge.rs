@@ -659,6 +659,7 @@ pub fn apply_core_to_slint(
                 scale,
                 show_hotbar_1,
                 show_hotbar_2,
+                npc_interaction_clicks,
                 key_bindings,
             } => {
                 let settings_state =
@@ -678,6 +679,7 @@ pub fn apply_core_to_slint(
                 settings_state.set_scale(*scale);
                 settings_state.set_show_hotbar_1(*show_hotbar_1);
                 settings_state.set_show_hotbar_2(*show_hotbar_2);
+                settings_state.set_npc_interaction_clicks(*npc_interaction_clicks as i32);
 
                 set_keys!(move_up);
                 set_keys!(move_down);
