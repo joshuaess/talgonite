@@ -154,7 +154,16 @@ export component InventoryPanel inherits BasePanel {
                     }
                 }
 
+                Rectangle {}
 
+                Rectangle {
+                    Text {
+                        text: "Weight: " + GameState.current-weight + " / " + GameState.max-weight;
+                        font-size: Theme.font-size-small;
+                        color: Theme.foreground-muted;
+                        font-weight: 400;
+                    }
+                }
             }
         }
     }

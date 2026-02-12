@@ -253,6 +253,8 @@ fn process_net_packets(
                             player_attrs.stat_con = primary.con;
                             player_attrs.stat_dex = primary.dex;
                             player_attrs.unspent_stat_points = primary.unspent_points;
+                            player_attrs.max_weight = primary.max_weight as i32;
+                            player_attrs.current_weight = primary.current_weight as i32;
                         }
                         if let Some(exp) = &attrs.exp_gold {
                             player_attrs.experience = exp.total_exp;
